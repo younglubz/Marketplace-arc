@@ -302,16 +302,7 @@ function MyNFTs() {
           }
         }
 
-        console.log('📋 Listagens encontradas:', listings.length)
-        listings.forEach((l, idx) => {
-          console.log(`   Listing ${idx}:`, {
-            listingId: l.listingId,
-            nftContract: l.nftContract,
-            tokenId: Number(l.tokenId),
-            seller: l.seller,
-            active: l.active
-          })
-        })
+        console.log('Listagens encontradas:', listings.length)
         setMyListings(listings)
       } catch (listingError) {
         console.error('Erro ao carregar listagens:', listingError)
@@ -826,12 +817,6 @@ function MyNFTs() {
                 Number(l.tokenId) === nft.tokenId && 
                 l.nftContract?.toLowerCase() === nft.contractAddress?.toLowerCase()
               )
-              
-              // Debug: log para verificar matching
-              if (myListings.length > 0) {
-                console.log(`🔍 NFT ${nft.metadata.name} (tokenId: ${nft.tokenId}, contract: ${nft.contractAddress})`)
-                console.log(`   isListed: ${isListed}`)
-              }
 
               return (
                 <div key={nft.tokenId} className="nft-card">

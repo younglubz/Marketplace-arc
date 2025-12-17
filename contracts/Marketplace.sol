@@ -32,6 +32,10 @@ contract Marketplace is ReentrancyGuard, Ownable {
     // Rastreamento de listagens por vendedor
     mapping(address => uint256[]) public sellerListings;
     
+    // Rastreamento de listing ativo por NFT (nftContract => tokenId => listingId)
+    // Valor 0 significa não listado (listingId começa em 0, então usamos +1)
+    mapping(address => mapping(uint256 => uint256)) private activeListingId;
+    
     // Eventos
     event ItemListed(
         uint256 indexed listingId,
@@ -74,6 +78,14 @@ contract Marketplace is ReentrancyGuard, Ownable {
         require(_price > 0, "Preco deve ser maior que zero");
         require(_nftContract != address(0), "Endereco NFT invalido");
         
+        // Verifica se o NFT já está listado
+        uint256 existingListingId = activeListingId[_nftContract][_tokenId];
+        if (existingListingId > 0) {
+            // NFT já está listado - verifica se o listing ainda está ativo
+            Listing storage existingListing = listings[existingListingId - 1];
+            require(!existingListing.active, "NFT ja esta listado. Use updateListingPrice para mudar o preco.");
+        }
+        
         IERC721 nft = IERC721(_nftContract);
         require(nft.ownerOf(_tokenId) == msg.sender, "Voce nao e o dono deste NFT");
         require(
@@ -93,6 +105,9 @@ contract Marketplace is ReentrancyGuard, Ownable {
         });
         
         sellerListings[msg.sender].push(listingId);
+        
+        // Marca o NFT como listado (armazena listingId + 1 para diferenciar de 0)
+        activeListingId[_nftContract][_tokenId] = listingId + 1;
         
         emit ItemListed(listingId, msg.sender, _nftContract, _tokenId, _price);
     }
@@ -152,6 +167,9 @@ contract Marketplace is ReentrancyGuard, Ownable {
             require(successRefund, "Reembolso falhou");
         }
         
+        // Limpa o rastreamento de listing ativo
+        activeListingId[listing.nftContract][listing.tokenId] = 0;
+        
         emit ItemSold(_listingId, msg.sender, listing.seller, listing.price);
     }
     
@@ -166,6 +184,9 @@ contract Marketplace is ReentrancyGuard, Ownable {
         require(listing.active, "Listagem ja inativa");
         
         listing.active = false;
+        
+        // Limpa o rastreamento de listing ativo
+        activeListingId[listing.nftContract][listing.tokenId] = 0;
         
         emit ListingCancelled(_listingId);
     }
@@ -221,6 +242,22 @@ contract Marketplace is ReentrancyGuard, Ownable {
      */
     function getSellerListings(address _seller) external view returns (uint256[] memory) {
         return sellerListings[_seller];
+    }
+    
+    /**
+     * @dev Verifica se um NFT está listado e retorna o listingId
+     * @return isListed Se o NFT está listado
+     * @return listingId O ID do listing (0 se não listado)
+     */
+    function isNFTListed(address _nftContract, uint256 _tokenId) external view returns (bool isListed, uint256 listingId) {
+        uint256 storedId = activeListingId[_nftContract][_tokenId];
+        if (storedId > 0) {
+            listingId = storedId - 1;
+            isListed = listings[listingId].active;
+        } else {
+            isListed = false;
+            listingId = 0;
+        }
     }
     
     /**
