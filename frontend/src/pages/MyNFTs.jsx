@@ -291,9 +291,14 @@ function MyNFTs() {
           try {
             const listing = await marketplaceContract.getListing(i)
             if (listing.seller.toLowerCase() === account.toLowerCase() && listing.active) {
+              // Extrai os campos da struct explicitamente (ethers.js v6)
               listings.push({
                 listingId: i,
-                ...listing
+                nftContract: listing.nftContract,
+                tokenId: listing.tokenId,
+                seller: listing.seller,
+                price: listing.price,
+                active: listing.active
               })
             }
           } catch (e) {
@@ -303,6 +308,13 @@ function MyNFTs() {
         }
 
         console.log('Listagens encontradas:', listings.length)
+        if (listings.length > 0) {
+          console.log('Primeiro listing:', {
+            listingId: listings[0].listingId,
+            nftContract: listings[0].nftContract,
+            tokenId: Number(listings[0].tokenId)
+          })
+        }
         setMyListings(listings)
       } catch (listingError) {
         console.error('Erro ao carregar listagens:', listingError)
