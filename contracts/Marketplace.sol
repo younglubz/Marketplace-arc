@@ -55,6 +55,7 @@ contract Marketplace is ReentrancyGuard, Ownable {
     );
     
     event ListingCancelled(uint256 indexed listingId);
+    event ListingPriceUpdated(uint256 indexed listingId, uint256 oldPrice, uint256 newPrice);
     event MarketplaceFeeUpdated(uint256 newFee);
     
     constructor() Ownable(msg.sender) {}
@@ -167,6 +168,24 @@ contract Marketplace is ReentrancyGuard, Ownable {
         listing.active = false;
         
         emit ListingCancelled(_listingId);
+    }
+    
+    /**
+     * @dev Atualiza o preço de uma listagem ativa
+     * @param _listingId ID da listagem
+     * @param _newPrice Novo preço em USDC (wei)
+     */
+    function updateListingPrice(uint256 _listingId, uint256 _newPrice) external nonReentrant {
+        Listing storage listing = listings[_listingId];
+        
+        require(listing.seller == msg.sender, "Apenas o vendedor pode atualizar o preco");
+        require(listing.active, "Listagem nao esta ativa");
+        require(_newPrice > 0, "Preco deve ser maior que zero");
+        
+        uint256 oldPrice = listing.price;
+        listing.price = _newPrice;
+        
+        emit ListingPriceUpdated(_listingId, oldPrice, _newPrice);
     }
     
     /**

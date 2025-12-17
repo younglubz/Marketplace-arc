@@ -16,7 +16,7 @@ module.exports = {
     arcTestnet: {
       url: "https://rpc.testnet.arc.network",
       chainId: 5042002,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      accounts: ["0xba4bb35e807aba1c7d1e241c7485c050e9a7aebfb4e388fc6ee8c05c666fc8d7"],
       gasPrice: "auto"
     }
   },

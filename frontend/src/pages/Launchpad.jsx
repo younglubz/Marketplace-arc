@@ -119,7 +119,8 @@ function Launchpad() {
       // 1. Busca coleções do CollectionFactory
       if (collectionFactoryContract) {
         try {
-          console.log('🏭 Buscando coleções do CollectionFactory...')
+          const factoryAddress = await collectionFactoryContract.getAddress()
+          console.log('🏭 Buscando coleções do CollectionFactory:', factoryAddress)
           const collections = await collectionFactoryContract.getAllCollections()
           console.log(`📁 Coleções encontradas: ${collections.length}`)
           
@@ -141,45 +142,69 @@ function Launchpad() {
               // Verifica quantos NFTs ainda estão disponíveis para mint público
               let availableForMint = 0
               let publicMintEnabled = false
+              let contractMintPrice = 0n
+              let rawAvailableURIs = 0
               try {
-                availableForMint = Number(await collectionContract.availableURIsCount())
+                rawAvailableURIs = Number(await collectionContract.availableURIsCount())
+                availableForMint = rawAvailableURIs
                 publicMintEnabled = await collectionContract.publicMintEnabled()
+                contractMintPrice = await collectionContract.mintPrice()
+                
+                console.log(`🔍 [${collectionName}] Raw values:`, {
+                  rawAvailableURIs,
+                  publicMintEnabled,
+                  totalSupply: Number(totalSupply),
+                  maxSupply: Number(maxSupply)
+                })
+                
+                // Fallback: Se não tem URIs mas ainda não mintou nada, usa maxSupply - totalSupply
+                // Isso acontece com coleções antigas que foram criadas sem adicionar as URIs corretamente
+                if (availableForMint === 0 && Number(totalSupply) < Number(maxSupply)) {
+                  console.log(`⚠️ [${collectionName}] Using fallback: maxSupply - totalSupply`)
+                  availableForMint = Number(maxSupply) - Number(totalSupply)
+                }
               } catch (e) {
+                console.log(`❌ [${collectionName}] Error getting contract data:`, e.message)
                 // Se não suporta, calcula manualmente
                 availableForMint = Number(maxSupply) - Number(totalSupply)
               }
               
-              // Conta quantos NFTs o criador ainda possui (para coleções pré-mintadas)
-              let creatorOwned = 0
-              if (Number(totalSupply) > 0) {
-                for (let i = 1; i <= Math.min(Number(totalSupply), 50); i++) {
-                  try {
-                    const owner = await collectionContract.ownerOf(i)
-                    if (owner.toLowerCase() === creator.toLowerCase()) {
-                      creatorOwned++
-                    }
-                  } catch (e) {
-                    break
-                  }
-                }
-              }
+              // No modelo de launchpad:
+              // - O criador apenas OFERTA a coleção (não minta nada para si)
+              // - Os compradores mintam diretamente via publicMint()
+              // - totalSupply = quantos NFTs foram VENDIDOS/COMPRADOS
+              // - available = quantos ainda podem ser comprados
               
-              // "available" = NFTs disponíveis para compra/mint
-              // Se tem mint público: quantos podem ainda ser mintados
-              // Se não tem: quantos o criador ainda possui para vender
-              const available = publicMintEnabled ? availableForMint : creatorOwned
-              const sold = Number(totalSupply) - creatorOwned
+              // "minted" = quantos NFTs foram vendidos (comprados por usuários)
+              const minted = Number(totalSupply)
+              
+              // "available" = quantos NFTs ainda podem ser comprados
+              const available = availableForMint
+              
+              console.log(`📊 Collection ${collectionName}:`, {
+                maxSupply: Number(maxSupply),
+                totalSupply: Number(totalSupply),
+                availableURIsCount: availableForMint,
+                publicMintEnabled,
+                minted,
+                available
+              })
+              
+              // Converte o preço do contrato de wei para USDC (18 decimais)
+              const mintPriceInUsdc = contractMintPrice > 0n 
+                ? ethers.formatEther(contractMintPrice) 
+                : '0'
               
               // Busca o primeiro NFT para obter metadados da coleção
               let metadata = {
                 name: collectionName,
                 description: '',
                 image: '',
-                initial_price: '0',
+                initial_price: mintPriceInUsdc, // Usa o preço do contrato
+                mint_price_wei: contractMintPrice.toString(), // Preço em wei para transações
                 supply: Number(maxSupply),
-                minted: sold, // Agora "minted" representa NFTs vendidos
-                available: available,
-                creatorOwned: creatorOwned,
+                minted: minted, // Quantos foram vendidos/comprados por usuários
+                available: available, // Quantos ainda podem ser comprados
                 publicMintEnabled: publicMintEnabled,
                 creator: creator
               }
@@ -196,7 +221,8 @@ function Launchpad() {
                       name: parsed.collection_name || collectionName,
                       description: parsed.description || '',
                       image: parsed.image || '',
-                      initial_price: parsed.initial_price || '0',
+                      // Prioriza o preço do contrato, se existir; senão usa dos metadados
+                      initial_price: metadata.initial_price !== '0' ? metadata.initial_price : (parsed.initial_price || '0'),
                       social_links: parsed.social_links || {},
                       launch_time: parsed.launch_time || null,
                       has_whitelist: parsed.has_whitelist || false
@@ -220,7 +246,8 @@ function Launchpad() {
                             name: fetched.collection_name || collectionName,
                             description: fetched.description || '',
                             image: fetched.image || '',
-                            initial_price: fetched.initial_price || '0',
+                            // Prioriza o preço do contrato, se existir; senão usa dos metadados
+                            initial_price: metadata.initial_price !== '0' ? metadata.initial_price : (fetched.initial_price || '0'),
                             social_links: fetched.social_links || {},
                             launch_time: fetched.launch_time || null,
                             has_whitelist: fetched.has_whitelist || false
@@ -681,6 +708,18 @@ function Launchpad() {
             signer
           )
           
+          // Define o preço de mint no contrato (em wei - USDC tem 18 decimais)
+          const priceInWei = formData.price && parseFloat(formData.price) > 0 
+            ? ethers.parseEther(formData.price) 
+            : 0n
+          
+          if (priceInWei > 0n) {
+            toast.loading('Setting mint price...', { id: 'launch' })
+            const setPriceTx = await collectionContract.setMintPrice(priceInWei)
+            await setPriceTx.wait()
+            console.log('✅ Mint price set to:', formData.price, 'USDC')
+          }
+          
           toast.loading(`Minting ${imagesToProcess.length} NFTs to collection...`, { id: 'launch' })
           
           // Cria metadados para cada NFT da coleção
@@ -755,16 +794,19 @@ function Launchpad() {
             tokenURIs.push(nftTokenURI)
           }
           
-          // Mint todos os NFTs da coleção de uma vez (batch mint)
-          if (tokenURIs.length === 1) {
-            toast.loading(`Minting NFT 1 of 1...`, { id: 'launch' })
-            await collectionContract.mint(account, tokenURIs[0])
-          } else {
-            toast.loading(`Minting ${tokenURIs.length} NFTs in batch...`, { id: 'launch' })
-            await collectionContract.mintBatch(account, tokenURIs)
-          }
+          // Adiciona as URIs ao contrato para permitir mint público
+          toast.loading('Adding token URIs to collection...', { id: 'launch' })
+          const addURIsTx = await collectionContract.addTokenURIs(tokenURIs)
+          await addURIsTx.wait()
+          console.log('✅ Token URIs added to collection')
           
-          toast.success(`Coleção criada com sucesso! ${imagesToProcess.length} NFT${imagesToProcess.length > 1 ? 's' : ''} com ranking de raridade.`, { id: 'launch', duration: 6000 })
+          // Habilita o mint público para que compradores possam comprar
+          toast.loading('Enabling public mint...', { id: 'launch' })
+          const enablePublicMintTx = await collectionContract.setPublicMintEnabled(true)
+          await enablePublicMintTx.wait()
+          console.log('✅ Public mint enabled')
+          
+          toast.success(`Collection created successfully! ${imagesToProcess.length} NFT${imagesToProcess.length > 1 ? 's' : ''} available for purchase at ${formData.price || '0'} USDC each.`, { id: 'launch', duration: 6000 })
           
           // Limpa o formulário
           setFormData({
@@ -942,17 +984,46 @@ function Launchpad() {
             collectionAddress = creatorCollections[creatorCollections.length - 1]
           }
           
-          // Cria instância do contrato CollectionNFT e mint o primeiro NFT
+          // Cria instância do contrato CollectionNFT usando o signer do usuário
           const collectionContract = new ethers.Contract(
             collectionAddress,
             CollectionNFTABI,
-            await collectionFactoryContract.runner
+            signer
           )
           
-          toast.loading('Minting first NFT of collection...', { id: 'launch' })
-          await collectionContract.mint(account, instantTokenURI)
+          // Define o preço de mint no contrato (em wei - USDC tem 18 decimais)
+          const priceInWei = formData.price && parseFloat(formData.price) > 0 
+            ? ethers.parseEther(formData.price) 
+            : 0n
           
-          toast.success(`Collection created successfully! This collection will have ${supply} units.`, { id: 'launch', duration: 6000 })
+          if (priceInWei > 0n) {
+            toast.loading('Setting mint price...', { id: 'launch' })
+            const setPriceTx = await collectionContract.setMintPrice(priceInWei)
+            await setPriceTx.wait()
+            console.log('✅ Mint price set to:', formData.price, 'USDC')
+          }
+          
+          // Adiciona as URIs ao contrato para mint público (uma URI por unidade de supply)
+          toast.loading('Adding token URIs to collection...', { id: 'launch' })
+          const urisToAdd = Array(supply).fill(instantTokenURI)
+          console.log(`📝 Adding ${urisToAdd.length} URIs to collection...`)
+          const addURITx = await collectionContract.addTokenURIs(urisToAdd)
+          await addURITx.wait()
+          
+          // Verifica se as URIs foram adicionadas
+          const addedURIsCount = await collectionContract.availableURIsCount()
+          console.log(`✅ Added ${supply} token URIs to collection. Available URIs count: ${addedURIsCount}`)
+          
+          // Habilita o mint público
+          toast.loading('Enabling public mint...', { id: 'launch' })
+          const enableMintTx = await collectionContract.setPublicMintEnabled(true)
+          await enableMintTx.wait()
+          
+          // Verifica status final
+          const finalPublicMintEnabled = await collectionContract.publicMintEnabled()
+          console.log(`✅ Public mint enabled: ${finalPublicMintEnabled}`)
+          
+          toast.success(`Collection created successfully! ${supply} units available for ${formData.price || 'free'} USDC each.`, { id: 'launch', duration: 6000 })
         } else {
           // Coleção agendada
           toast.loading('Creating scheduled collection contract...', { id: 'launch' })
@@ -983,13 +1054,34 @@ function Launchpad() {
           const collectionContract = new ethers.Contract(
             collectionAddress,
             CollectionNFTABI,
-            await collectionFactoryContract.runner
+            signer
           )
           
-          toast.loading('Minting first NFT of scheduled collection...', { id: 'launch' })
-          await collectionContract.mint(account, tokenURI)
+          // Define o preço de mint no contrato (em wei - USDC tem 18 decimais)
+          const priceInWei = formData.price && parseFloat(formData.price) > 0 
+            ? ethers.parseEther(formData.price) 
+            : 0n
           
-          toast.success(`Scheduled collection created! Will have ${supply} units and will be displayed on ${new Date(launchTime * 1000).toLocaleString()}`, { id: 'launch', duration: 8000 })
+          if (priceInWei > 0n) {
+            toast.loading('Setting mint price...', { id: 'launch' })
+            const setPriceTx = await collectionContract.setMintPrice(priceInWei)
+            await setPriceTx.wait()
+            console.log('✅ Mint price set to:', formData.price, 'USDC')
+          }
+          
+          // Adiciona as URIs ao contrato para mint público (uma URI por unidade de supply)
+          toast.loading('Adding token URIs to collection...', { id: 'launch' })
+          const urisToAdd = Array(supply).fill(tokenURI)
+          const addURITx = await collectionContract.addTokenURIs(urisToAdd)
+          await addURITx.wait()
+          console.log(`✅ Added ${supply} token URIs to collection`)
+          
+          // Habilita o mint público
+          toast.loading('Enabling public mint...', { id: 'launch' })
+          const enableMintTx = await collectionContract.setPublicMintEnabled(true)
+          await enableMintTx.wait()
+          
+          toast.success(`Scheduled collection created! ${supply} units available at ${formData.price || 'free'} USDC. Launches on ${new Date(launchTime * 1000).toLocaleString()}`, { id: 'launch', duration: 8000 })
         }
       } else {
         // NFT único: usa MockNFT
@@ -1099,7 +1191,7 @@ function Launchpad() {
     return false
   }, [account, nftContract])
 
-  // Mint de uma coleção criada pelo CollectionFactory
+  // Compra um NFT de uma coleção criada pelo CollectionFactory
   const mintFromCollection = async (launch) => {
     if (!account) {
       toast.error('Please connect your wallet first')
@@ -1113,8 +1205,7 @@ function Launchpad() {
 
     try {
       setBuying(launch.collectionAddress)
-      toast.loading('Minting NFT...', { id: 'mint' })
-
+      
       // Usa o contrato da coleção diretamente
       const collectionContract = new ethers.Contract(
         launch.collectionAddress,
@@ -1122,52 +1213,63 @@ function Launchpad() {
         signer
       )
 
-      // Obtém o próximo tokenId
-      const totalSupply = await collectionContract.totalSupply()
-      const nextTokenId = Number(totalSupply) + 1
-      const maxSupply = await collectionContract.maxSupply()
-
-      if (nextTokenId > Number(maxSupply)) {
+      // Verifica se ainda há NFTs disponíveis
+      const availableURIs = await collectionContract.availableURIsCount()
+      if (Number(availableURIs) === 0) {
         toast.error('Collection is sold out!', { id: 'mint' })
+        setBuying(null)
         return
       }
 
-      // Cria metadados para o novo NFT
-      const collectionName = await collectionContract.collectionName()
+      // Verifica se o mint público está habilitado
+      const publicMintEnabled = await collectionContract.publicMintEnabled()
+      if (!publicMintEnabled) {
+        toast.error('Public mint is not enabled for this collection', { id: 'mint' })
+        setBuying(null)
+        return
+      }
+
+      // Obtém o preço de mint do contrato
+      const mintPrice = await collectionContract.mintPrice()
+      const priceInUsdc = ethers.formatEther(mintPrice)
       
-      const nftMetadata = {
-        name: `${collectionName} #${nextTokenId}`,
-        description: launch.metadata.description || '',
-        image: launch.metadata.image || '',
-        collection_name: collectionName,
-        collection_supply: Number(maxSupply),
-        edition_number: nextTokenId,
-        is_collection: true,
-        attributes: [
-          { trait_type: 'Collection', value: collectionName },
-          { trait_type: 'Edition', value: `${nextTokenId} of ${Number(maxSupply)}` }
-        ]
+      console.log('💰 Mint price:', priceInUsdc, 'USDC')
+      
+      // Verifica se o usuário tem saldo suficiente
+      const balance = await signer.provider.getBalance(account)
+      if (balance < mintPrice) {
+        toast.error(`Insufficient balance. You need ${priceInUsdc} USDC`, { id: 'mint' })
+        setBuying(null)
+        return
       }
 
-      // Upload metadados para IPFS
-      let tokenURI = ''
-      try {
-        const metadataHash = await uploadMetadataToIPFS(nftMetadata)
-        tokenURI = getIPFSUrl(metadataHash)
-      } catch (ipfsError) {
-        console.warn('Erro ao fazer upload de metadados, usando JSON inline:', ipfsError)
-        tokenURI = JSON.stringify(nftMetadata)
+      // Mostra o preço ao usuário
+      if (mintPrice > 0n) {
+        toast.loading(`Purchasing NFT for ${priceInUsdc} USDC...`, { id: 'mint' })
+      } else {
+        toast.loading('Minting free NFT...', { id: 'mint' })
       }
 
-      // Mint o NFT
-      const tx = await collectionContract.mint(account, tokenURI)
+      // Usa publicMint que é payable e envia o valor do preço
+      const tx = await collectionContract.publicMint(1, { value: mintPrice })
       await tx.wait()
 
-      toast.success('NFT minted successfully!', { id: 'mint' })
+      toast.success(`NFT purchased successfully for ${priceInUsdc} USDC!`, { id: 'mint' })
       loadLaunches()
     } catch (error) {
-      console.error('Error minting NFT:', error)
-      toast.error(`Error minting: ${error.message?.substring(0, 100) || 'Unknown error'}`, { id: 'mint' })
+      console.error('Error purchasing NFT:', error)
+      
+      // Mensagens de erro mais amigáveis
+      let errorMsg = error.message?.substring(0, 100) || 'Unknown error'
+      if (error.message?.includes('insufficient funds')) {
+        errorMsg = 'Insufficient USDC balance'
+      } else if (error.message?.includes('Public mint not enabled')) {
+        errorMsg = 'Public mint is not enabled'
+      } else if (error.message?.includes('No URIs available')) {
+        errorMsg = 'Collection is sold out'
+      }
+      
+      toast.error(`Error purchasing: ${errorMsg}`, { id: 'mint' })
     } finally {
       setBuying(null)
     }
@@ -1401,16 +1503,20 @@ function Launchpad() {
           </div>
           
           {/* Preço */}
-          {launch.metadata.initial_price && parseFloat(launch.metadata.initial_price) > 0 && (
-            <div className="nft-price" style={{ marginBottom: '0.75rem' }}>
-              <div style={{ width: '100%' }}>
-                <div className="price-label">Mint Price</div>
-                <div className="price-value" style={{ marginTop: '0.25rem', fontSize: '1.125rem' }}>
-                  💵 {launch.metadata.initial_price} USDC
-                </div>
+          <div className="nft-price" style={{ marginBottom: '0.75rem' }}>
+            <div style={{ width: '100%' }}>
+              <div className="price-label">
+                {launch.metadata.initial_price && parseFloat(launch.metadata.initial_price) > 0 
+                  ? 'Purchase Price' 
+                  : 'Price'}
+              </div>
+              <div className="price-value" style={{ marginTop: '0.25rem', fontSize: '1.125rem' }}>
+                💵 {launch.metadata.initial_price && parseFloat(launch.metadata.initial_price) > 0 
+                  ? `${launch.metadata.initial_price} USDC` 
+                  : 'Free'}
               </div>
             </div>
-          )}
+          </div>
           
           {/* Info de taxas para o comprador */}
           <div style={{
@@ -1461,9 +1567,12 @@ function Launchpad() {
             onClick={() => mintFromCollection(launch)}
             disabled={buying === launch.collectionAddress || available <= 0 || !account}
           >
-            {buying === launch.collectionAddress ? 'Minting...' : 
+            {buying === launch.collectionAddress ? 'Purchasing...' : 
              available <= 0 ? 'Sold Out' :
-             !account ? 'Connect Wallet' : 'Mint Now'}
+             !account ? 'Connect Wallet' : 
+             launch.metadata.initial_price && parseFloat(launch.metadata.initial_price) > 0 
+               ? `Buy for ${launch.metadata.initial_price} USDC` 
+               : 'Mint Free'}
           </button>
         </div>
       </div>

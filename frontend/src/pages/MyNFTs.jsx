@@ -15,9 +15,13 @@ function MyNFTs() {
   const [loading, setLoading] = useState(true)
   const [showListModal, setShowListModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showUpdatePriceModal, setShowUpdatePriceModal] = useState(false)
   const [selectedNFT, setSelectedNFT] = useState(null)
+  const [selectedListing, setSelectedListing] = useState(null)
   const [listPrice, setListPrice] = useState('')
+  const [newPrice, setNewPrice] = useState('')
   const [listing, setListing] = useState(false)
+  const [updatingPrice, setUpdatingPrice] = useState(false)
   const [editFormData, setEditFormData] = useState({
     name: '',
     description: '',
@@ -546,6 +550,55 @@ function MyNFTs() {
     }
   }
 
+  const openUpdatePriceModal = (listing, nft) => {
+    setSelectedListing(listing)
+    setSelectedNFT(nft)
+    setNewPrice(ethers.formatEther(listing.price))
+    setShowUpdatePriceModal(true)
+  }
+
+  const closeUpdatePriceModal = () => {
+    setShowUpdatePriceModal(false)
+    setSelectedListing(null)
+    setNewPrice('')
+  }
+
+  const updateListingPrice = async () => {
+    if (!newPrice || parseFloat(newPrice) <= 0) {
+      toast.error('Enter a valid price')
+      return
+    }
+
+    if (!isCorrectNetwork) {
+      toast.error('Please connect to Arc Testnet')
+      return
+    }
+
+    try {
+      setUpdatingPrice(true)
+      toast.loading('Updating price...', { id: 'updatePrice' })
+
+      const priceInWei = ethers.parseEther(newPrice)
+      const tx = await marketplaceContract.updateListingPrice(selectedListing.listingId, priceInWei)
+      await tx.wait()
+
+      toast.success(`Price updated to ${newPrice} USDC!`, { id: 'updatePrice' })
+      closeUpdatePriceModal()
+      loadMyNFTs()
+    } catch (error) {
+      console.error('Error updating price:', error)
+      let errorMsg = 'Error updating price'
+      if (error.message?.includes('Apenas o vendedor')) {
+        errorMsg = 'Only the seller can update the price'
+      } else if (error.message?.includes('Listagem nao esta ativa')) {
+        errorMsg = 'Listing is no longer active'
+      }
+      toast.error(errorMsg, { id: 'updatePrice' })
+    } finally {
+      setUpdatingPrice(false)
+    }
+  }
+
   if (!account) {
     return (
       <div className="container">
@@ -880,6 +933,15 @@ function MyNFTs() {
                             </div>
                           </div>
                         </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                          <button
+                            className="btn btn-primary"
+                            style={{ flex: 1 }}
+                            onClick={() => openUpdatePriceModal(listing, nft)}
+                          >
+                            💰 Update Price
+                          </button>
+                        </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <button
                             className="btn btn-outline"
@@ -1126,6 +1188,100 @@ function MyNFTs() {
               >
                 {listing ? 'Processing...' : 'Complete Listing'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Update de Preço */}
+      {showUpdatePriceModal && (
+        <div className="modal-overlay" onClick={closeUpdatePriceModal}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">💰 Update Listing Price</h2>
+              <button className="modal-close" onClick={closeUpdatePriceModal}>
+                ×
+              </button>
+            </div>
+
+            <div>
+              <p className="text-secondary mb-2" style={{ fontSize: '0.9375rem' }}>
+                You are updating: <strong>{selectedNFT?.metadata.name}</strong>
+              </p>
+
+              <div style={{ 
+                background: 'var(--border-light)', 
+                padding: '1rem', 
+                borderRadius: '10px', 
+                marginBottom: '1.5rem',
+                border: '1px solid var(--border)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="text-muted" style={{ fontSize: '0.875rem' }}>Current Price</span>
+                  <span style={{ fontWeight: '600', color: 'var(--text-secondary)' }}>
+                    {selectedListing ? ethers.formatEther(selectedListing.price) : '0'} USDC
+                  </span>
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginTop: '1rem' }}>
+                <label className="form-label">New Price (USDC)</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  className="form-input"
+                  placeholder="0.0"
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                  style={{ fontSize: '1.25rem', fontWeight: '600' }}
+                />
+              </div>
+
+              <div style={{ 
+                background: 'var(--border-light)', 
+                padding: '1rem', 
+                borderRadius: '10px', 
+                marginBottom: '1.5rem',
+                border: '1px solid var(--border)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span className="text-muted" style={{ fontSize: '0.875rem' }}>New Price</span>
+                  <span style={{ fontWeight: '600' }}>{newPrice || '0'} USDC</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <span className="text-muted" style={{ fontSize: '0.875rem' }}>Service Fee (2.5%)</span>
+                  <span style={{ fontWeight: '600' }}>{newPrice ? (parseFloat(newPrice) * 0.025).toFixed(4) : '0'} USDC</span>
+                </div>
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  paddingTop: '0.75rem', 
+                  borderTop: '1px solid var(--border)',
+                  fontWeight: '600'
+                }}>
+                  <span>You'll receive</span>
+                  <span style={{ color: 'var(--primary)' }}>{newPrice ? (parseFloat(newPrice) * 0.975).toFixed(4) : '0'} USDC</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  className="btn btn-secondary"
+                  style={{ flex: 1, padding: '1rem' }}
+                  onClick={closeUpdatePriceModal}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-primary"
+                  style={{ flex: 1, padding: '1rem' }}
+                  onClick={updateListingPrice}
+                  disabled={updatingPrice || !newPrice || parseFloat(newPrice) <= 0}
+                >
+                  {updatingPrice ? 'Updating...' : 'Update Price'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

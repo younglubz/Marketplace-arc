@@ -1,8 +1,8 @@
 // Contratos deployados na Arc Testnet
 export const CONTRACT_ADDRESSES = {
-  marketplace: '0x1D8B194377CAEFb609Cb3b347002a88f4C09E5f9',
+  marketplace: '0xb1B9d130086A6816Cc2D88bC03F671bCc1b9fa08',
   mockNFT: '0x2ceD43bE1bBd8aD876F606e34a2E23673B5A131E',
-  collectionFactory: '0x21cee92ff14088d48275126AE324968353fE1353',
+  collectionFactory: '0x4a1F79c0e888B65B22a4177CD0705bE8A8F75282',
 }
 
 // Endereço para recebimento de fees da plataforma
