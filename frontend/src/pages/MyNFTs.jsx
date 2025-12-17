@@ -808,8 +808,15 @@ function MyNFTs() {
         ) : (
           <div className="nft-grid">
             {myNFTs.map((nft) => {
-              const isListed = myListings.some(l => Number(l.tokenId) === nft.tokenId)
-              const listing = myListings.find(l => Number(l.tokenId) === nft.tokenId)
+              // Compara tanto tokenId quanto contractAddress para identificar corretamente o listing
+              const isListed = myListings.some(l => 
+                Number(l.tokenId) === nft.tokenId && 
+                l.nftContract.toLowerCase() === nft.contractAddress.toLowerCase()
+              )
+              const listing = myListings.find(l => 
+                Number(l.tokenId) === nft.tokenId && 
+                l.nftContract.toLowerCase() === nft.contractAddress.toLowerCase()
+              )
 
               return (
                 <div key={nft.tokenId} className="nft-card">
