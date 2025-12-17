@@ -2,7 +2,7 @@
 export const CONTRACT_ADDRESSES = {
   marketplace: '0xb1B9d130086A6816Cc2D88bC03F671bCc1b9fa08',
   mockNFT: '0x2ceD43bE1bBd8aD876F606e34a2E23673B5A131E',
-  collectionFactory: '0x4a1F79c0e888B65B22a4177CD0705bE8A8F75282',
+  collectionFactory: '0xa489e41E3Be16347C01c65979c7869DcbF0a0B96',
 }
 
 // Endereço para recebimento de fees da plataforma
