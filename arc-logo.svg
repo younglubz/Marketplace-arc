@@ -1,0 +1,55 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradiente metálico do branco ao cinza claro com toque azulado -->
+    <linearGradient id="metallicGradient" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="25%" stop-color="#FAFAFA" stop-opacity="1"/>
+      <stop offset="50%" stop-color="#F0F0F0" stop-opacity="1"/>
+      <stop offset="75%" stop-color="#E5E5E5" stop-opacity="1"/>
+      <stop offset="90%" stop-color="#D5D5D5" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#C0C0C0" stop-opacity="1"/>
+    </linearGradient>
+    <!-- Gradiente azulado sutil para efeito metálico -->
+    <linearGradient id="blueTint" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E8F4F8" stop-opacity="0.2"/>
+      <stop offset="50%" stop-color="#F0F8FF" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#E0E8F0" stop-opacity="0.25"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Letra A estilizada - arco largo no topo formando as duas pernas -->
+  <!-- Baseado na descrição: arco largo no topo, sem barra horizontal tradicional -->
+  <path 
+    d="M 25 85 
+       Q 30 20 50 15 
+       Q 70 20 75 85 
+       L 65 85 
+       Q 62 40 50 45 
+       Q 38 40 35 85 Z" 
+    fill="url(#metallicGradient)"
+    stroke="none"
+  />
+  
+  <!-- Overlay com tom azulado sutil -->
+  <path 
+    d="M 25 85 
+       Q 30 20 50 15 
+       Q 70 20 75 85 
+       L 65 85 
+       Q 62 40 50 45 
+       Q 38 40 35 85 Z" 
+    fill="url(#blueTint)"
+    stroke="none"
+  />
+  
+  <!-- Destaque de brilho no topo (parte mais clara) -->
+  <path 
+    d="M 32 25 
+       Q 50 15 68 25" 
+    stroke="rgba(255, 255, 255, 0.7)"
+    stroke-width="2"
+    stroke-linecap="round"
+    fill="none"
+  />
+</svg>
+
