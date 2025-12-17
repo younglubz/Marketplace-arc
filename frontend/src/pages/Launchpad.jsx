@@ -1402,15 +1402,43 @@ function Launchpad() {
           
           {/* Preço */}
           {launch.metadata.initial_price && parseFloat(launch.metadata.initial_price) > 0 && (
-            <div className="nft-price" style={{ marginBottom: '1rem' }}>
+            <div className="nft-price" style={{ marginBottom: '0.75rem' }}>
               <div style={{ width: '100%' }}>
                 <div className="price-label">Mint Price</div>
                 <div className="price-value" style={{ marginTop: '0.25rem', fontSize: '1.125rem' }}>
-                  {launch.metadata.initial_price} USDC
+                  💵 {launch.metadata.initial_price} USDC
                 </div>
               </div>
             </div>
           )}
+          
+          {/* Info de taxas para o comprador */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.25rem',
+            fontSize: '0.7rem',
+            color: 'var(--text-secondary)',
+            padding: '0.5rem',
+            background: 'var(--surface-alt)',
+            borderRadius: '6px',
+            marginBottom: '0.75rem'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>💰 Você paga:</span>
+              <span style={{ fontWeight: '600', color: 'var(--text)' }}>
+                {launch.metadata.initial_price || '0'} USDC
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>👑 Royalty (revenda):</span>
+              <span>5%</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>🏷️ Taxa marketplace (revenda):</span>
+              <span>2.5%</span>
+            </div>
+          </div>
           
           {/* Criador */}
           {launch.metadata.creator && (
