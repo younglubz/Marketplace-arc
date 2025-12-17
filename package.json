@@ -1,0 +1,22 @@
+{
+  "name": "arc-marketplace",
+  "version": "1.0.0",
+  "description": "Marketplace descentralizado na rede Arc Testnet",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "deploy": "npx hardhat run scripts/deploy.js --network arcTestnet",
+    "dev": "cd frontend && npm run dev"
+  },
+  "keywords": ["marketplace", "blockchain", "arc", "web3"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.1"
+  }
+}
+

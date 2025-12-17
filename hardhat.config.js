@@ -1,0 +1,39 @@
+require("@nomicfoundation/hardhat-toolbox");
+try { require('dotenv').config(); } catch (e) { /* dotenv optional */ }
+
+/** @type import('hardhat/config').HardhatUserConfig */
+module.exports = {
+  solidity: {
+    version: "0.8.20",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200
+      }
+    }
+  },
+  networks: {
+    arcTestnet: {
+      url: "https://rpc.testnet.arc.network",
+      chainId: 5042002,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      gasPrice: "auto"
+    }
+  },
+  etherscan: {
+    apiKey: {
+      arcTestnet: "no-api-key-needed"
+    },
+    customChains: [
+      {
+        network: "arcTestnet",
+        chainId: 5042002,
+        urls: {
+          apiURL: "https://testnet.arcscan.app/api",
+          browserURL: "https://testnet.arcscan.app"
+        }
+      }
+    ]
+  }
+};
+
