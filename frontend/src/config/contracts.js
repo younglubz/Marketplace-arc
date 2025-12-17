@@ -5,6 +5,15 @@ export const CONTRACT_ADDRESSES = {
   collectionFactory: '0x21cee92ff14088d48275126AE324968353fE1353',
 }
 
+// Endereço para recebimento de fees da plataforma
+export const PLATFORM_FEE_RECEIVER = '0xbE4E0274E68a654767063F3DF1bB43Fe5B580414'
+
+// Configurações de taxas
+export const FEE_CONFIG = {
+  marketplaceFee: 2.5, // 2.5%
+  defaultRoyalty: 5,   // 5% royalty padrão para criadores
+}
+
 // Carteira deployer para criar novos contratos de coleção
 export const DEPLOYER_CONFIG = {
   address: '0xE7b25C69037697811962e95bB3Ed3972CE0B64f9',

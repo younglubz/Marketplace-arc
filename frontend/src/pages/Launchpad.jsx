@@ -138,6 +138,38 @@ function Launchpad() {
               const totalSupply = await collectionContract.totalSupply()
               const creator = await collectionContract.creator()
               
+              // Verifica quantos NFTs ainda estão disponíveis para mint público
+              let availableForMint = 0
+              let publicMintEnabled = false
+              try {
+                availableForMint = Number(await collectionContract.availableURIsCount())
+                publicMintEnabled = await collectionContract.publicMintEnabled()
+              } catch (e) {
+                // Se não suporta, calcula manualmente
+                availableForMint = Number(maxSupply) - Number(totalSupply)
+              }
+              
+              // Conta quantos NFTs o criador ainda possui (para coleções pré-mintadas)
+              let creatorOwned = 0
+              if (Number(totalSupply) > 0) {
+                for (let i = 1; i <= Math.min(Number(totalSupply), 50); i++) {
+                  try {
+                    const owner = await collectionContract.ownerOf(i)
+                    if (owner.toLowerCase() === creator.toLowerCase()) {
+                      creatorOwned++
+                    }
+                  } catch (e) {
+                    break
+                  }
+                }
+              }
+              
+              // "available" = NFTs disponíveis para compra/mint
+              // Se tem mint público: quantos podem ainda ser mintados
+              // Se não tem: quantos o criador ainda possui para vender
+              const available = publicMintEnabled ? availableForMint : creatorOwned
+              const sold = Number(totalSupply) - creatorOwned
+              
               // Busca o primeiro NFT para obter metadados da coleção
               let metadata = {
                 name: collectionName,
@@ -145,7 +177,10 @@ function Launchpad() {
                 image: '',
                 initial_price: '0',
                 supply: Number(maxSupply),
-                minted: Number(totalSupply),
+                minted: sold, // Agora "minted" representa NFTs vendidos
+                available: available,
+                creatorOwned: creatorOwned,
+                publicMintEnabled: publicMintEnabled,
                 creator: creator
               }
               
@@ -227,19 +262,20 @@ function Launchpad() {
       
       console.log(`📊 Total de coleções carregadas: ${allCollections.length}`)
       
-      // Separa em Current (disponíveis para mint) e Past (esgotadas)
+      // Separa em Current (disponíveis para mint/compra) e Past (esgotadas)
       const current = []
       const past = []
       
       allCollections.forEach(collection => {
-        const minted = collection.metadata.minted || 0
-        const supply = collection.metadata.supply || 0
+        const available = collection.metadata.available !== undefined 
+          ? collection.metadata.available 
+          : (collection.metadata.supply - collection.metadata.minted)
         
-        if (minted < supply) {
-          // Ainda tem NFTs disponíveis
+        if (available > 0) {
+          // Ainda tem NFTs disponíveis para compra/mint
           current.push(collection)
         } else {
-          // Esgotada
+          // Esgotada (vendida ou totalmente mintada)
           past.push(collection)
         }
       })
@@ -1243,9 +1279,9 @@ function Launchpad() {
 
   const renderLaunchCard = (launch) => {
     const isCollection = launch.isCollection
-    const minted = launch.metadata.minted || 0
+    const minted = launch.metadata.minted || 0 // NFTs vendidos
     const supply = launch.metadata.supply || 0
-    const available = supply - minted
+    const available = launch.metadata.available !== undefined ? launch.metadata.available : (supply - minted)
     const progress = supply > 0 ? (minted / supply) * 100 : 0
     
     return (
@@ -1569,7 +1605,7 @@ function Launchpad() {
                       <line x1="8" y1="2" x2="8" y2="6"/>
                       <line x1="3" y1="10" x2="21" y2="10"/>
                     </svg>
-                    Scheduled
+                    Future
                   </button>
                 </div>
               </div>

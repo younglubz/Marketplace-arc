@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { ethers } from 'ethers'
 import toast from 'react-hot-toast'
 import { useWeb3 } from '../context/Web3Context'
-import { ARC_TESTNET_CONFIG, CONTRACT_ADDRESSES } from '../config/contracts'
+import { ARC_TESTNET_CONFIG, CONTRACT_ADDRESSES, FEE_CONFIG } from '../config/contracts'
 import ArcLogo from '../components/ArcLogo'
 import CollectionNFTABI from '../abis/CollectionNFT.json'
 
@@ -712,7 +712,7 @@ function Collections() {
               <ArcLogo size={20} showText={false} />
             </a>
         </div>
-        <div className="nft-price" style={isFeatured ? { marginBottom: '1rem' } : {}}>
+        <div className="nft-price" style={isFeatured ? { marginBottom: '0.75rem' } : { marginBottom: '0.5rem' }}>
           <div style={{ width: '100%' }}>
             <div className="price-label">Current Price</div>
             <div className="price-value" style={{ marginTop: '0.25rem', fontSize: isFeatured ? '1.25rem' : '1rem' }}>
@@ -721,6 +721,29 @@ function Collections() {
             </div>
           </div>
         </div>
+        
+        {/* Fee Info */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontSize: '0.7rem',
+          color: 'var(--text-secondary)',
+          padding: '0.5rem',
+          background: 'var(--surface-alt)',
+          borderRadius: '6px',
+          marginBottom: '0.75rem',
+          gap: '0.5rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span>🏷️</span>
+            <span>Marketplace: {FEE_CONFIG.marketplaceFee}%</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span>👑</span>
+            <span>Royalty: {FEE_CONFIG.defaultRoyalty}%</span>
+          </div>
+        </div>
+        
         <button
           className={isFeatured ? "btn btn-primary" : "btn btn-primary"}
           style={{ width: '100%', padding: isFeatured ? '1rem' : '0.75rem', fontSize: isFeatured ? '1rem' : '0.875rem' }}
