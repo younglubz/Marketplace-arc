@@ -220,7 +220,7 @@ function Launchpad() {
                       ...metadata,
                       name: parsed.collection_name || collectionName,
                       description: parsed.description || '',
-                      image: parsed.image || '',
+                      image: parsed.image ? normalizeIPFSUrl(parsed.image) : '',
                       // Prioriza o preço do contrato, se existir; senão usa dos metadados
                       initial_price: metadata.initial_price !== '0' ? metadata.initial_price : (parsed.initial_price || '0'),
                       social_links: parsed.social_links || {},

@@ -61,7 +61,7 @@ function MyNFTs() {
       metadata = {
         name: parsed.name || `NFT #${tokenId}`,
         description: parsed.description || 'NFT from Genesis Marketplace',
-        image: parsed.image || '',
+        image: parsed.image ? normalizeIPFSUrl(parsed.image) : '',
         social_links: parsed.social_links || {},
         external_url: parsed.external_url || '',
         supply: parsed.collection_supply || parsed.supply || '1',

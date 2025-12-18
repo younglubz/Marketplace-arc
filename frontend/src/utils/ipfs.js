@@ -181,33 +181,40 @@ export const normalizeIPFSUrl = (ipfsUrl) => {
   
   // Se já for uma URL completa válida (http/https)
   if (ipfsUrl.startsWith('http://') || ipfsUrl.startsWith('https://')) {
-    // Se for URL do gateway Pinata, garante que está no formato correto
+    // Se for URL do gateway Pinata, extrai o hash e reconstrói
     if (ipfsUrl.includes('gateway.pinata.cloud/ipfs/')) {
-      // Extrai o hash da URL para garantir formato correto
-      const hashMatch = ipfsUrl.match(/ipfs\/([^/?]+)/)
+      // Extrai o hash da URL
+      const hashMatch = ipfsUrl.match(/ipfs\/([^/?&#]+)/)
       if (hashMatch && hashMatch[1]) {
-        return `${IPFS_GATEWAY}${hashMatch[1]}`
+        const hash = hashMatch[1].trim()
+        // Reconstroi a URL com o formato correto do gateway
+        const normalizedUrl = `${IPFS_GATEWAY}${hash}`
+        console.log('🔗 IPFS URL normalizada:', { original: ipfsUrl, normalized: normalizedUrl })
+        return normalizedUrl
       }
-      return ipfsUrl
     }
-    // Se for outro gateway ou URL completa, retorna como está
+    // Se for outro gateway, retorna como está
     return ipfsUrl
   }
   
   // Remove prefixo ipfs:// se presente
-  const hash = ipfsUrl.replace(/^ipfs:\/\//, '').trim()
+  let hash = ipfsUrl.replace(/^ipfs:\/\//, '').trim()
+  
+  // Remove qualquer barra inicial se presente
+  hash = hash.replace(/^\//, '')
   
   // Se for um hash IPFS válido (Qm... ou baf...), constrói a URL
   if (hash.match(/^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{58})/i)) {
     return `${IPFS_GATEWAY}${hash}`
   }
   
-  // Se parece ser um hash mas não foi reconhecido, tenta mesmo assim
-  if (hash.length > 30 && (hash.startsWith('Qm') || hash.startsWith('baf'))) {
+  // Se parece ser um hash IPFS (começa com Qm ou baf e tem tamanho razoável), tenta mesmo assim
+  if (hash.length >= 30 && (hash.startsWith('Qm') || hash.startsWith('baf'))) {
     return `${IPFS_GATEWAY}${hash}`
   }
   
   // Se não reconhecer o formato, retorna como está
+  console.warn('⚠️ Formato IPFS não reconhecido:', ipfsUrl)
   return ipfsUrl
 }
 

@@ -227,7 +227,7 @@ function Collections() {
               metadata = {
                 name: parsed.name || `NFT #${tokenIdValue}`,
                 description: parsed.description || 'NFT from Arc Marketplace',
-                image: parsed.image || '',
+                image: parsed.image ? normalizeIPFSUrl(parsed.image) : '',
                 social_links: parsed.social_links || {},
                 external_url: parsed.external_url || '',
                 supply: parsed.supply || '1',
