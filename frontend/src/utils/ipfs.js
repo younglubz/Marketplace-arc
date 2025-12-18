@@ -255,3 +255,92 @@ export const isValidIPFSHash = (hash) => {
   return ipfsPattern.test(hash.replace(/^ipfs:\/\//, ''))
 }
 
+/**
+ * Carrega metadata de um tokenURI com tratamento robusto de erros
+ * @param {string} tokenURI - URI do token (pode ser JSON inline, hash IPFS, ipfs://, ou URL completa)
+ * @returns {Promise<Object|null>} Metadata carregado ou null se falhar
+ */
+export const loadMetadataFromURI = async (tokenURI) => {
+  if (!tokenURI) {
+    console.warn('⚠️ loadMetadataFromURI: tokenURI vazio')
+    return null
+  }
+
+  // Tenta parsear como JSON inline primeiro
+  try {
+    const parsed = JSON.parse(tokenURI)
+    console.log('✅ Metadata parseado de JSON inline')
+    // Normaliza a imagem se existir
+    if (parsed.image) {
+      parsed.image = normalizeIPFSUrl(parsed.image)
+    }
+    return parsed
+  } catch (e) {
+    // Não é JSON inline, tenta buscar do IPFS
+    console.log('📡 TokenURI não é JSON inline, tentando buscar do IPFS...')
+  }
+
+  // Normaliza o tokenURI para URL acessível
+  let metadataUrl = tokenURI.trim()
+  
+  // Se já for uma URL HTTP completa, usa diretamente
+  if (metadataUrl.startsWith('http://') || metadataUrl.startsWith('https://')) {
+    // Remove parâmetros de query existentes para evitar problemas
+    metadataUrl = metadataUrl.split('?')[0]
+  } else if (metadataUrl.startsWith('ipfs://')) {
+    // Converte ipfs:// para URL do gateway
+    metadataUrl = normalizeIPFSUrl(metadataUrl)
+  } else if (metadataUrl.startsWith('Qm') || metadataUrl.startsWith('baf')) {
+    // É um hash IPFS puro
+    metadataUrl = normalizeIPFSUrl(metadataUrl)
+  } else {
+    console.warn('⚠️ Formato de tokenURI não reconhecido:', tokenURI.substring(0, 100))
+    return null
+  }
+
+  // Tenta fazer fetch do metadata
+  if (metadataUrl.startsWith('http')) {
+    try {
+      console.log('🌐 Buscando metadata de:', metadataUrl.substring(0, 80) + '...')
+      
+      // Adiciona timeout para evitar travamentos
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 segundos
+      
+      const response = await fetch(metadataUrl, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+      
+      clearTimeout(timeoutId)
+      
+      if (response.ok) {
+        const metadata = await response.json()
+        console.log('✅ Metadata carregado com sucesso')
+        
+        // Normaliza a imagem se existir
+        if (metadata.image) {
+          metadata.image = normalizeIPFSUrl(metadata.image)
+          console.log('🖼️ Imagem normalizada:', metadata.image.substring(0, 80) + '...')
+        }
+        
+        return metadata
+      } else {
+        console.warn(`⚠️ Erro HTTP ao buscar metadata: ${response.status} ${response.statusText}`)
+        return null
+      }
+    } catch (fetchError) {
+      if (fetchError.name === 'AbortError') {
+        console.warn('⏱️ Timeout ao buscar metadata de:', metadataUrl.substring(0, 80) + '...')
+      } else {
+        console.warn('❌ Erro ao buscar metadata:', fetchError.message)
+      }
+      return null
+    }
+  }
+
+  return null
+}
+

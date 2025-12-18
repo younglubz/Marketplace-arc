@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { useWeb3 } from '../context/Web3Context'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import CollectionNFTABI from '../abis/CollectionNFT.json'
-import { normalizeIPFSUrl } from '../utils/ipfs'
+import { normalizeIPFSUrl, loadMetadataFromURI } from '../utils/ipfs'
 
 function CreatorDashboard() {
   const { collectionAddress } = useParams()
@@ -269,41 +269,19 @@ function CreatorDashboard() {
       if (!image && Number(totalSupply) > 0) {
         try {
           const tokenURI = await contract.tokenURI(1)
-          let metadata = {}
-          try {
-            metadata = JSON.parse(tokenURI)
-            // Normaliza a imagem se vier de JSON inline
-            if (metadata.image) {
-              metadata.image = normalizeIPFSUrl(metadata.image)
-            }
-          } catch {
-            // Tenta buscar do IPFS
-            let url = tokenURI
-            if (tokenURI.startsWith('ipfs://')) {
-              url = normalizeIPFSUrl(tokenURI)
-            } else if (tokenURI.startsWith('Qm') || tokenURI.startsWith('baf')) {
-              url = normalizeIPFSUrl(tokenURI)
-            }
-            if (url.startsWith('http')) {
-              try {
-                const res = await fetch(url)
-                if (res.ok) {
-                  metadata = await res.json()
-                  // Normaliza a imagem se vier de fetch do IPFS
-                  if (metadata.image) {
-                    metadata.image = normalizeIPFSUrl(metadata.image)
-                  }
-                }
-              } catch (fetchError) {
-                console.warn('Dashboard: Erro ao buscar metadata do IPFS:', fetchError)
-              }
-            }
-          }
-          if (metadata.image) {
-            image = metadata.image
+          console.log('📋 Dashboard: TokenURI da coleção:', tokenURI.substring(0, 100) + '...')
+          
+          // Usa função robusta para carregar metadata
+          const loadedMetadata = await loadMetadataFromURI(tokenURI)
+          
+          if (loadedMetadata && loadedMetadata.image) {
+            image = loadedMetadata.image
+            console.log('✅ Dashboard: Imagem da coleção carregada:', image.substring(0, 80) + '...')
+          } else {
+            console.warn('⚠️ Dashboard: Metadata carregado mas sem imagem')
           }
         } catch (e) {
-          console.log('Dashboard: Não foi possível obter imagem do NFT')
+          console.warn('❌ Dashboard: Erro ao obter imagem do NFT:', e)
         }
       }
       

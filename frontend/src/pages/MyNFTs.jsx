@@ -6,7 +6,7 @@ import { useWeb3 } from '../context/Web3Context'
 import { CONTRACT_ADDRESSES, ARC_TESTNET_CONFIG } from '../config/contracts'
 import ArcLogo from '../components/ArcLogo'
 import CollectionNFTABI from '../abis/CollectionNFT.json'
-import { normalizeIPFSUrl } from '../utils/ipfs'
+import { normalizeIPFSUrl, loadMetadataFromURI } from '../utils/ipfs'
 
 function MyNFTs() {
   const { nftContract, marketplaceContract, collectionFactoryContract, account, isCorrectNetwork, signer } = useWeb3()
@@ -47,73 +47,46 @@ function MyNFTs() {
 
   // Função auxiliar para carregar metadados de um NFT
   const loadNFTMetadata = async (tokenURI, tokenId, contractAddress) => {
-    let metadata = {
+    // Metadata padrão
+    const defaultMetadata = {
       name: `NFT #${tokenId}`,
       description: 'NFT from Genesis Marketplace',
       image: '',
+      social_links: {},
+      external_url: '',
       supply: '1',
+      collection_name: '',
+      edition_number: null,
+      rarity: null,
+      is_collection: false,
       contractAddress
     }
-
+    
     try {
-      // Primeiro tenta parsear como JSON (se for JSON inline)
-      const parsed = JSON.parse(tokenURI)
-      metadata = {
-        name: parsed.name || `NFT #${tokenId}`,
-        description: parsed.description || 'NFT from Genesis Marketplace',
-        image: parsed.image ? normalizeIPFSUrl(parsed.image) : '',
-        social_links: parsed.social_links || {},
-        external_url: parsed.external_url || '',
-        supply: parsed.collection_supply || parsed.supply || '1',
-        collection_name: parsed.collection_name || '',
-        edition_number: parsed.edition_number || null,
-        rarity: parsed.rarity || null,
-        is_collection: parsed.is_collection || false,
-        contractAddress
-      }
-    } catch (e) {
-      // Se não for JSON, tenta buscar de URL ou IPFS
-      let metadataUrl = tokenURI
+      // Usa função robusta para carregar metadata
+      const loadedMetadata = await loadMetadataFromURI(tokenURI)
       
-      // Converte IPFS para URL acessível
-      if (tokenURI.startsWith('ipfs://')) {
-        const ipfsHash = tokenURI.replace('ipfs://', '')
-        metadataUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`
-      } else if (tokenURI.startsWith('Qm') || tokenURI.startsWith('baf')) {
-        metadataUrl = `https://gateway.pinata.cloud/ipfs/${tokenURI}`
-      }
-      
-      if (metadataUrl.startsWith('http')) {
-        try {
-          const response = await fetch(metadataUrl)
-          if (response.ok) {
-            const fetchedMetadata = await response.json()
-            metadata = {
-              name: fetchedMetadata.name || `NFT #${tokenId}`,
-              description: fetchedMetadata.description || 'NFT from Genesis Marketplace',
-              image: fetchedMetadata.image || '',
-              social_links: fetchedMetadata.social_links || {},
-              external_url: fetchedMetadata.external_url || '',
-              supply: fetchedMetadata.collection_supply || fetchedMetadata.supply || '1',
-              collection_name: fetchedMetadata.collection_name || '',
-              edition_number: fetchedMetadata.edition_number || null,
-              rarity: fetchedMetadata.rarity || null,
-              is_collection: fetchedMetadata.is_collection || false,
-              contractAddress
-            }
-            
-            // Normaliza imagem IPFS (trata hash, ipfs://, ou URL completa)
-            if (metadata.image) {
-              metadata.image = normalizeIPFSUrl(metadata.image)
-            }
-          }
-        } catch (fetchError) {
-          console.log('Could not load metadata from URI:', fetchError)
+      if (loadedMetadata) {
+        return {
+          ...defaultMetadata,
+          name: loadedMetadata.name || defaultMetadata.name,
+          description: loadedMetadata.description || defaultMetadata.description,
+          image: loadedMetadata.image || defaultMetadata.image,
+          social_links: loadedMetadata.social_links || defaultMetadata.social_links,
+          external_url: loadedMetadata.external_url || defaultMetadata.external_url,
+          supply: loadedMetadata.collection_supply || loadedMetadata.supply || defaultMetadata.supply,
+          collection_name: loadedMetadata.collection_name || defaultMetadata.collection_name,
+          edition_number: loadedMetadata.edition_number || defaultMetadata.edition_number,
+          rarity: loadedMetadata.rarity || defaultMetadata.rarity,
+          is_collection: loadedMetadata.is_collection || defaultMetadata.is_collection,
+          contractAddress
         }
       }
+    } catch (error) {
+      console.warn('❌ Erro ao carregar metadata do NFT:', error)
     }
 
-    return metadata
+    return defaultMetadata
   }
 
   const loadMyNFTs = async () => {

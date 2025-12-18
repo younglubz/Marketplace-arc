@@ -3,7 +3,7 @@ import { ethers } from 'ethers'
 import toast from 'react-hot-toast'
 import { useWeb3 } from '../context/Web3Context'
 import { useNavigate } from 'react-router-dom'
-import { uploadToIPFS, getIPFSUrl, uploadMetadataToIPFS, normalizeIPFSUrl } from '../utils/ipfs'
+import { uploadToIPFS, getIPFSUrl, uploadMetadataToIPFS, normalizeIPFSUrl, loadMetadataFromURI } from '../utils/ipfs'
 import CollectionNFTABI from '../abis/CollectionNFT.json'
 
 // Componente de botão que verifica whitelist
@@ -212,56 +212,33 @@ function Launchpad() {
               if (Number(totalSupply) > 0) {
                 try {
                   const tokenURI = await collectionContract.tokenURI(1)
+                  console.log('📋 TokenURI da coleção:', tokenURI.substring(0, 100) + '...')
                   
-                  // Tenta parsear metadados
-                  try {
-                    const parsed = JSON.parse(tokenURI)
+                  // Usa função robusta para carregar metadata
+                  const loadedMetadata = await loadMetadataFromURI(tokenURI)
+                  
+                  if (loadedMetadata) {
                     metadata = {
                       ...metadata,
-                      name: parsed.collection_name || collectionName,
-                      description: parsed.description || '',
-                      image: parsed.image ? normalizeIPFSUrl(parsed.image) : '',
+                      name: loadedMetadata.collection_name || collectionName,
+                      description: loadedMetadata.description || '',
+                      image: loadedMetadata.image || '',
                       // Prioriza o preço do contrato, se existir; senão usa dos metadados
-                      initial_price: metadata.initial_price !== '0' ? metadata.initial_price : (parsed.initial_price || '0'),
-                      social_links: parsed.social_links || {},
-                      launch_time: parsed.launch_time || null,
-                      has_whitelist: parsed.has_whitelist || false
+                      initial_price: metadata.initial_price !== '0' ? metadata.initial_price : (loadedMetadata.initial_price || '0'),
+                      social_links: loadedMetadata.social_links || {},
+                      launch_time: loadedMetadata.launch_time || null,
+                      has_whitelist: loadedMetadata.has_whitelist || false
                     }
-                  } catch (e) {
-                    // Se não for JSON, tenta buscar do IPFS
-                    let metadataUrl = tokenURI
-                    if (tokenURI.startsWith('ipfs://')) {
-                      metadataUrl = normalizeIPFSUrl(tokenURI)
-                    } else if (tokenURI.startsWith('Qm') || tokenURI.startsWith('baf')) {
-                      metadataUrl = normalizeIPFSUrl(tokenURI)
-                    } else if (tokenURI.startsWith('http')) {
-                      metadataUrl = tokenURI
-                    }
-                    
-                    if (metadataUrl.startsWith('http')) {
-                      try {
-                        const response = await fetch(metadataUrl)
-                        if (response.ok) {
-                          const fetched = await response.json()
-                          metadata = {
-                            ...metadata,
-                            name: fetched.collection_name || collectionName,
-                            description: fetched.description || '',
-                            image: fetched.image ? normalizeIPFSUrl(fetched.image) : '',
-                            // Prioriza o preço do contrato, se existir; senão usa dos metadados
-                            initial_price: metadata.initial_price !== '0' ? metadata.initial_price : (fetched.initial_price || '0'),
-                            social_links: fetched.social_links || {},
-                            launch_time: fetched.launch_time || null,
-                            has_whitelist: fetched.has_whitelist || false
-                          }
-                        }
-                      } catch (fetchError) {
-                        console.warn('Erro ao buscar metadados:', fetchError)
-                      }
-                    }
+                    console.log('✅ Metadata da coleção carregado:', { 
+                      name: metadata.name, 
+                      hasImage: !!metadata.image,
+                      imageUrl: metadata.image ? metadata.image.substring(0, 80) + '...' : 'sem imagem'
+                    })
+                  } else {
+                    console.warn('⚠️ Não foi possível carregar metadata da coleção')
                   }
                 } catch (uriError) {
-                  console.warn('Erro ao buscar tokenURI:', uriError)
+                  console.warn('❌ Erro ao buscar tokenURI da coleção:', uriError)
                 }
               }
               
