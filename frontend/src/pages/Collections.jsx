@@ -494,11 +494,12 @@ function Collections() {
       <div className="nft-image" style={isFeatured ? { height: '400px', position: 'relative' } : { position: 'relative' }}>
         {listing.metadata.image ? (
           <img 
-            src={normalizeIPFSUrl(listing.metadata.image)}
+            src={normalizeIPFSUrl(listing.metadata.image, true)}
             alt={listing.metadata.name}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             onError={(e) => {
-              console.error('Erro ao carregar imagem:', listing.metadata.image)
+              console.error('❌ Erro ao carregar imagem:', listing.metadata.image)
+              console.error('URL tentada:', e.target.src)
               e.target.style.display = 'none'
             }}
           />

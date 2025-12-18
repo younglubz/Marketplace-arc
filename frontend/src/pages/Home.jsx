@@ -446,7 +446,7 @@ function Home() {
                 }}>
                   {nft.metadata.image ? (
                     <img
-                      src={normalizeIPFSUrl(nft.metadata.image)}
+                      src={normalizeIPFSUrl(nft.metadata.image, true)}
                       alt={nft.metadata.name}
                       style={{
                         width: '100%',
@@ -454,6 +454,8 @@ function Home() {
                         objectFit: 'cover'
                       }}
                       onError={(e) => {
+                        console.error('❌ Erro ao carregar imagem:', nft.metadata.image)
+                        console.error('URL tentada:', e.target.src)
                         e.target.style.display = 'none'
                       }}
                     />

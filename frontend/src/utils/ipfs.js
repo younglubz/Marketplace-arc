@@ -158,13 +158,16 @@ export const uploadMetadataToIPFS = async (metadata) => {
 /**
  * Converte hash IPFS para URL completa
  * @param {string} ipfsHash - Hash IPFS
+ * @param {boolean} noCache - Se true, adiciona parâmetro para evitar cache
  * @returns {string} URL completa do arquivo
  */
-export const getIPFSUrl = (ipfsHash) => {
+export const getIPFSUrl = (ipfsHash, noCache = false) => {
   if (!ipfsHash) return ''
   // Remove 'ipfs://' se presente
   const hash = ipfsHash.replace(/^ipfs:\/\//, '')
-  return `${IPFS_GATEWAY}${hash}`
+  const url = `${IPFS_GATEWAY}${hash}`
+  // Adiciona timestamp para evitar cache se solicitado
+  return noCache ? `${url}?t=${Date.now()}` : url
 }
 
 /**
@@ -173,7 +176,7 @@ export const getIPFSUrl = (ipfsHash) => {
  * @param {string} ipfsUrl - URL ou hash IPFS em qualquer formato
  * @returns {string} URL normalizada do gateway
  */
-export const normalizeIPFSUrl = (ipfsUrl) => {
+export const normalizeIPFSUrl = (ipfsUrl, noCache = false) => {
   if (!ipfsUrl) {
     console.warn('⚠️ normalizeIPFSUrl recebeu URL vazia')
     return ''
@@ -182,41 +185,55 @@ export const normalizeIPFSUrl = (ipfsUrl) => {
   // Remove espaços em branco
   ipfsUrl = ipfsUrl.trim()
   
+  // Remove parâmetros de query existentes (incluindo cache-busting antigo)
+  const urlWithoutParams = ipfsUrl.split('?')[0]
+  
   // Se já for uma URL completa válida (http/https)
-  if (ipfsUrl.startsWith('http://') || ipfsUrl.startsWith('https://')) {
+  if (urlWithoutParams.startsWith('http://') || urlWithoutParams.startsWith('https://')) {
     // Se for URL do gateway Pinata, extrai o hash e reconstrói
-    if (ipfsUrl.includes('gateway.pinata.cloud/ipfs/') || ipfsUrl.includes('/ipfs/')) {
+    if (urlWithoutParams.includes('gateway.pinata.cloud/ipfs/') || urlWithoutParams.includes('/ipfs/')) {
       // Extrai o hash da URL (funciona para gateway.pinata.cloud/ipfs/ ou qualquer /ipfs/)
-      const hashMatch = ipfsUrl.match(/\/ipfs\/([^/?&#]+)/)
+      const hashMatch = urlWithoutParams.match(/\/ipfs\/([^/?&#]+)/)
       if (hashMatch && hashMatch[1]) {
         const hash = hashMatch[1].trim()
         // Reconstroi a URL com o formato correto do gateway Pinata
-        const normalizedUrl = `${IPFS_GATEWAY}${hash}`
+        let normalizedUrl = `${IPFS_GATEWAY}${hash}`
+        // Adiciona cache-busting se solicitado
+        if (noCache) {
+          normalizedUrl = `${normalizedUrl}?t=${Date.now()}`
+        }
         console.log('🔗 IPFS URL normalizada (de URL completa):', { original: ipfsUrl.substring(0, 80) + '...', hash: hash.substring(0, 20) + '...', normalized: normalizedUrl.substring(0, 80) + '...' })
         return normalizedUrl
       }
     }
-    // Se for outro gateway HTTP, retorna como está
-    console.log('🔗 URL HTTP mantida (não é gateway Pinata):', ipfsUrl.substring(0, 80) + '...')
-    return ipfsUrl
+    // Se for outro gateway HTTP, retorna como está (mas remove cache antigo)
+    const finalUrl = noCache && !urlWithoutParams.includes('?') ? `${urlWithoutParams}?t=${Date.now()}` : urlWithoutParams
+    console.log('🔗 URL HTTP mantida (não é gateway Pinata):', finalUrl.substring(0, 80) + '...')
+    return finalUrl
   }
   
   // Remove prefixo ipfs:// se presente
-  let hash = ipfsUrl.replace(/^ipfs:\/\//, '').trim()
+  let hash = urlWithoutParams.replace(/^ipfs:\/\//, '').trim()
   
   // Remove qualquer barra inicial se presente
   hash = hash.replace(/^\//, '')
   
   // Se for um hash IPFS válido (Qm... ou baf...), constrói a URL
   if (hash.match(/^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{58})/i)) {
-    const normalizedUrl = `${IPFS_GATEWAY}${hash}`
+    let normalizedUrl = `${IPFS_GATEWAY}${hash}`
+    if (noCache) {
+      normalizedUrl = `${normalizedUrl}?t=${Date.now()}`
+    }
     console.log('🔗 IPFS URL normalizada (de hash):', { original: hash.substring(0, 20) + '...', normalized: normalizedUrl.substring(0, 80) + '...' })
     return normalizedUrl
   }
   
   // Se parece ser um hash IPFS (começa com Qm ou baf e tem tamanho razoável), tenta mesmo assim
   if (hash.length >= 30 && (hash.startsWith('Qm') || hash.startsWith('baf'))) {
-    const normalizedUrl = `${IPFS_GATEWAY}${hash}`
+    let normalizedUrl = `${IPFS_GATEWAY}${hash}`
+    if (noCache) {
+      normalizedUrl = `${normalizedUrl}?t=${Date.now()}`
+    }
     console.log('🔗 IPFS URL normalizada (hash provável):', { original: hash.substring(0, 20) + '...', normalized: normalizedUrl.substring(0, 80) + '...' })
     return normalizedUrl
   }

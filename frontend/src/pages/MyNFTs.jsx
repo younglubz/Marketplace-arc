@@ -690,11 +690,15 @@ function MyNFTs() {
               >
                 {/* Collection Image */}
                 <div style={{ height: '160px', overflow: 'hidden', position: 'relative' }}>
-                  {collection.image ? (
+                    {collection.image ? (
                     <img 
-                      src={normalizeIPFSUrl(collection.image)}
+                      src={normalizeIPFSUrl(collection.image, true)}
                       alt={collection.name}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        console.error('❌ Erro ao carregar imagem da coleção:', collection.image)
+                        console.error('URL tentada:', e.target.src)
+                      }}
                     />
                   ) : (
                     <div style={{ 
@@ -831,11 +835,12 @@ function MyNFTs() {
                   <div className="nft-image">
                     {nft.metadata.image ? (
                       <img 
-                      src={normalizeIPFSUrl(nft.metadata.image)}
+                      src={normalizeIPFSUrl(nft.metadata.image, true)}
                         alt={nft.metadata.name}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => {
-                          console.error('Erro ao carregar imagem:', nft.metadata.image)
+                          console.error('❌ Erro ao carregar imagem:', nft.metadata.image)
+                          console.error('URL tentada:', e.target.src)
                           e.target.style.display = 'none'
                         }}
                       />

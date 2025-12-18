@@ -1426,14 +1426,18 @@ function CreatorDashboard() {
                     Preview
                   </label>
                   <img 
-                    src={normalizeIPFSUrl(collectionImageUrl)}
+                    src={normalizeIPFSUrl(collectionImageUrl, true)}
                     alt="Collection preview"
                     style={{
                       maxWidth: '200px',
                       borderRadius: '12px',
                       border: '1px solid var(--border)'
                     }}
-                    onError={(e) => e.target.style.display = 'none'}
+                    onError={(e) => {
+                      console.error('❌ Erro ao carregar preview da imagem:', collectionImageUrl)
+                      console.error('URL tentada:', e.target.src)
+                      e.target.style.display = 'none'
+                    }}
                   />
                 </div>
               )}

@@ -1410,12 +1410,16 @@ function Launchpad() {
         <div className="nft-image" style={{ height: '300px', overflow: 'hidden', position: 'relative' }}>
           {launch.metadata.image ? (
             <img 
-              src={normalizeIPFSUrl(launch.metadata.image)}
+              src={normalizeIPFSUrl(launch.metadata.image, true)}
               alt={launch.metadata.name}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               onError={(e) => {
-                console.error('Erro ao carregar imagem:', launch.metadata.image)
+                console.error('❌ Erro ao carregar imagem:', launch.metadata.image)
+                console.error('URL tentada:', e.target.src)
                 e.target.style.display = 'none'
+              }}
+              onLoad={() => {
+                console.log('✅ Imagem carregada com sucesso:', launch.metadata.image)
               }}
             />
           ) : (
