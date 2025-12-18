@@ -6,6 +6,7 @@ import { useWeb3 } from '../context/Web3Context'
 import { CONTRACT_ADDRESSES, ARC_TESTNET_CONFIG } from '../config/contracts'
 import ArcLogo from '../components/ArcLogo'
 import CollectionNFTABI from '../abis/CollectionNFT.json'
+import { normalizeIPFSUrl } from '../utils/ipfs'
 
 function MyNFTs() {
   const { nftContract, marketplaceContract, collectionFactoryContract, account, isCorrectNetwork, signer } = useWeb3()
@@ -101,10 +102,9 @@ function MyNFTs() {
               contractAddress
             }
             
-            // Se a imagem também for IPFS, converte
-            if (metadata.image && metadata.image.startsWith('ipfs://')) {
-              const imageHash = metadata.image.replace('ipfs://', '')
-              metadata.image = `https://gateway.pinata.cloud/ipfs/${imageHash}`
+            // Normaliza imagem IPFS (trata hash, ipfs://, ou URL completa)
+            if (metadata.image) {
+              metadata.image = normalizeIPFSUrl(metadata.image)
             }
           }
         } catch (fetchError) {
@@ -692,11 +692,7 @@ function MyNFTs() {
                 <div style={{ height: '160px', overflow: 'hidden', position: 'relative' }}>
                   {collection.image ? (
                     <img 
-                      src={
-                        collection.image.startsWith('ipfs://') 
-                          ? collection.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
-                          : collection.image
-                      }
+                      src={normalizeIPFSUrl(collection.image)}
                       alt={collection.name}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
@@ -835,13 +831,7 @@ function MyNFTs() {
                   <div className="nft-image">
                     {nft.metadata.image ? (
                       <img 
-                        src={
-                          nft.metadata.image.startsWith('ipfs://') 
-                            ? nft.metadata.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
-                            : nft.metadata.image.startsWith('Qm') || nft.metadata.image.startsWith('baf')
-                            ? `https://gateway.pinata.cloud/ipfs/${nft.metadata.image}`
-                            : nft.metadata.image
-                        }
+                      src={normalizeIPFSUrl(nft.metadata.image)}
                         alt={nft.metadata.name}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => {

@@ -168,6 +168,50 @@ export const getIPFSUrl = (ipfsHash) => {
 }
 
 /**
+ * Normaliza uma URL IPFS para o formato correto do gateway
+ * Aceita: hash puro (Qm...), ipfs://hash, ou URL completa do gateway
+ * @param {string} ipfsUrl - URL ou hash IPFS em qualquer formato
+ * @returns {string} URL normalizada do gateway
+ */
+export const normalizeIPFSUrl = (ipfsUrl) => {
+  if (!ipfsUrl) return ''
+  
+  // Remove espaços em branco
+  ipfsUrl = ipfsUrl.trim()
+  
+  // Se já for uma URL completa válida (http/https)
+  if (ipfsUrl.startsWith('http://') || ipfsUrl.startsWith('https://')) {
+    // Se for URL do gateway Pinata, garante que está no formato correto
+    if (ipfsUrl.includes('gateway.pinata.cloud/ipfs/')) {
+      // Extrai o hash da URL para garantir formato correto
+      const hashMatch = ipfsUrl.match(/ipfs\/([^/?]+)/)
+      if (hashMatch && hashMatch[1]) {
+        return `${IPFS_GATEWAY}${hashMatch[1]}`
+      }
+      return ipfsUrl
+    }
+    // Se for outro gateway ou URL completa, retorna como está
+    return ipfsUrl
+  }
+  
+  // Remove prefixo ipfs:// se presente
+  const hash = ipfsUrl.replace(/^ipfs:\/\//, '').trim()
+  
+  // Se for um hash IPFS válido (Qm... ou baf...), constrói a URL
+  if (hash.match(/^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{58})/i)) {
+    return `${IPFS_GATEWAY}${hash}`
+  }
+  
+  // Se parece ser um hash mas não foi reconhecido, tenta mesmo assim
+  if (hash.length > 30 && (hash.startsWith('Qm') || hash.startsWith('baf'))) {
+    return `${IPFS_GATEWAY}${hash}`
+  }
+  
+  // Se não reconhecer o formato, retorna como está
+  return ipfsUrl
+}
+
+/**
  * Verifica se uma string é um hash IPFS válido
  * @param {string} hash - Hash para verificar
  * @returns {boolean}

@@ -5,6 +5,7 @@ import { useWeb3 } from '../context/Web3Context'
 import { ARC_TESTNET_CONFIG, CONTRACT_ADDRESSES, FEE_CONFIG } from '../config/contracts'
 import ArcLogo from '../components/ArcLogo'
 import CollectionNFTABI from '../abis/CollectionNFT.json'
+import { normalizeIPFSUrl } from '../utils/ipfs'
 
 function Collections() {
   const { marketplaceContract, account, nftContract, isCorrectNetwork } = useWeb3()
@@ -266,12 +267,9 @@ function Collections() {
                       edition_number: fetchedMetadata.edition_number || null
                     }
                     
-                    // Se a imagem também for IPFS, converte
-                    if (metadata.image && metadata.image.startsWith('ipfs://')) {
-                      const imageHash = metadata.image.replace('ipfs://', '')
-                      metadata.image = `https://gateway.pinata.cloud/ipfs/${imageHash}`
-                    } else if (metadata.image && (metadata.image.startsWith('Qm') || metadata.image.startsWith('baf'))) {
-                      metadata.image = `https://gateway.pinata.cloud/ipfs/${metadata.image}`
+                    // Normaliza imagem IPFS (trata hash, ipfs://, ou URL completa)
+                    if (metadata.image) {
+                      metadata.image = normalizeIPFSUrl(metadata.image)
                     }
                   }
                 } catch (fetchError) {
@@ -496,13 +494,7 @@ function Collections() {
       <div className="nft-image" style={isFeatured ? { height: '400px', position: 'relative' } : { position: 'relative' }}>
         {listing.metadata.image ? (
           <img 
-            src={
-              listing.metadata.image.startsWith('ipfs://') 
-                ? listing.metadata.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
-                : listing.metadata.image.startsWith('Qm') || listing.metadata.image.startsWith('baf')
-                ? `https://gateway.pinata.cloud/ipfs/${listing.metadata.image}`
-                : listing.metadata.image
-            }
+            src={normalizeIPFSUrl(listing.metadata.image)}
             alt={listing.metadata.name}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             onError={(e) => {

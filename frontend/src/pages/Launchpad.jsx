@@ -3,7 +3,7 @@ import { ethers } from 'ethers'
 import toast from 'react-hot-toast'
 import { useWeb3 } from '../context/Web3Context'
 import { useNavigate } from 'react-router-dom'
-import { uploadToIPFS, getIPFSUrl, uploadMetadataToIPFS } from '../utils/ipfs'
+import { uploadToIPFS, getIPFSUrl, uploadMetadataToIPFS, normalizeIPFSUrl } from '../utils/ipfs'
 import CollectionNFTABI from '../abis/CollectionNFT.json'
 
 // Componente de botão que verifica whitelist
@@ -253,9 +253,9 @@ function Launchpad() {
                             has_whitelist: fetched.has_whitelist || false
                           }
                           
-                          // Converte imagem IPFS
-                          if (metadata.image && metadata.image.startsWith('ipfs://')) {
-                            metadata.image = metadata.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
+                          // Normaliza imagem IPFS (trata hash, ipfs://, ou URL completa)
+                          if (metadata.image) {
+                            metadata.image = normalizeIPFSUrl(metadata.image)
                           }
                         }
                       } catch (fetchError) {
@@ -1413,13 +1413,7 @@ function Launchpad() {
         <div className="nft-image" style={{ height: '300px', overflow: 'hidden', position: 'relative' }}>
           {launch.metadata.image ? (
             <img 
-              src={
-                launch.metadata.image.startsWith('ipfs://') 
-                  ? launch.metadata.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
-                  : launch.metadata.image.startsWith('Qm') || launch.metadata.image.startsWith('baf')
-                  ? `https://gateway.pinata.cloud/ipfs/${launch.metadata.image}`
-                  : launch.metadata.image
-              }
+              src={normalizeIPFSUrl(launch.metadata.image)}
               alt={launch.metadata.name}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               onError={(e) => {

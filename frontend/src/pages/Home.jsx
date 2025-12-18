@@ -4,6 +4,7 @@ import { ethers } from 'ethers'
 import { useWeb3 } from '../context/Web3Context'
 import GenesisLogo from '../components/GenesisLogo'
 import ArcLogo from '../components/ArcLogo'
+import { normalizeIPFSUrl } from '../utils/ipfs'
 
 // GENESIS Marketplace - Home Page
 function Home() {
@@ -117,11 +118,8 @@ function Home() {
                         supply: fetchedMetadata.supply || '1'
                       }
                       
-                      if (metadata.image && metadata.image.startsWith('ipfs://')) {
-                        const imageHash = metadata.image.replace('ipfs://', '')
-                        metadata.image = `https://gateway.pinata.cloud/ipfs/${imageHash}`
-                      } else if (metadata.image && (metadata.image.startsWith('Qm') || metadata.image.startsWith('baf'))) {
-                        metadata.image = `https://gateway.pinata.cloud/ipfs/${metadata.image}`
+                      if (metadata.image) {
+                        metadata.image = normalizeIPFSUrl(metadata.image)
                       }
                     }
                   } catch (fetchError) {
@@ -448,13 +446,7 @@ function Home() {
                 }}>
                   {nft.metadata.image ? (
                     <img
-                      src={
-                        nft.metadata.image.startsWith('ipfs://')
-                          ? nft.metadata.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
-                          : nft.metadata.image.startsWith('Qm') || nft.metadata.image.startsWith('baf')
-                          ? `https://gateway.pinata.cloud/ipfs/${nft.metadata.image}`
-                          : nft.metadata.image
-                      }
+                      src={normalizeIPFSUrl(nft.metadata.image)}
                       alt={nft.metadata.name}
                       style={{
                         width: '100%',

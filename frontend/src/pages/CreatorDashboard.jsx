@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { useWeb3 } from '../context/Web3Context'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import CollectionNFTABI from '../abis/CollectionNFT.json'
+import { normalizeIPFSUrl } from '../utils/ipfs'
 
 function CreatorDashboard() {
   const { collectionAddress } = useParams()
@@ -283,7 +284,7 @@ function CreatorDashboard() {
             }
           }
           if (metadata.image) {
-            image = metadata.image
+            image = normalizeIPFSUrl(metadata.image)
           }
         } catch (e) {
           console.log('Dashboard: Não foi possível obter imagem do NFT')
@@ -1409,7 +1410,7 @@ function CreatorDashboard() {
                     Preview
                   </label>
                   <img 
-                    src={collectionImageUrl.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')}
+                    src={normalizeIPFSUrl(collectionImageUrl)}
                     alt="Collection preview"
                     style={{
                       maxWidth: '200px',
