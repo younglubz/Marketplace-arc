@@ -5,10 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GENESIS - Launch on Genesis</title>
     <script>
-      // Redireciona para index.html mantendo o path
+      // Redirect to index.html maintaining the path
+      // This handles SPA routing on GitHub Pages
       const path = window.location.pathname
+      const search = window.location.search
       const hash = window.location.hash
-      window.location.replace('/Marketplace-arc/' + path.replace('/Marketplace-arc/', '') + hash)
+      
+      // Remove /Marketplace-arc/ prefix if present to avoid duplication
+      let cleanPath = path.replace(/^\/Marketplace-arc/, '')
+      if (!cleanPath.startsWith('/')) {
+        cleanPath = '/' + cleanPath
+      }
+      
+      // Redirect to index.html
+      window.location.replace('/Marketplace-arc/index.html' + cleanPath + search + hash)
     </script>
   </head>
   <body>
