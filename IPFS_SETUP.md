@@ -37,6 +37,31 @@ Este projeto usa **IPFS (InterPlanetary File System)** para armazenar imagens e 
    npm run dev
    ```
 
+### Configuração para GitHub Pages (Produção)
+
+Para que o build no GitHub Actions funcione corretamente, você precisa configurar os secrets do repositório:
+
+1. **Acesse o repositório no GitHub**
+   - Vá para: **Settings** → **Secrets and variables** → **Actions**
+
+2. **Adicione os secrets**
+   - Clique em **"New repository secret"**
+   - Adicione os seguintes secrets:
+     - **Nome**: `VITE_PINATA_API_KEY`
+     - **Valor**: Sua API Key do Pinata
+   
+   - Clique em **"New repository secret"** novamente:
+     - **Nome**: `VITE_PINATA_SECRET_KEY`
+     - **Valor**: Sua Secret Key do Pinata
+
+3. **O workflow já está configurado**
+   - O arquivo `.github/workflows/deploy.yml` já está configurado para usar esses secrets automaticamente durante o build
+
+**⚠️ IMPORTANTE**: 
+- Nunca commite o arquivo `.env` no Git (já está no `.gitignore`)
+- Use GitHub Secrets apenas para builds de produção
+- Para desenvolvimento local, use o arquivo `frontend/.env`
+
 ### Opção 2: Web3.Storage (Alternativa)
 
 1. **Crie uma conta**
