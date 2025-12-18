@@ -209,32 +209,67 @@ function Launchpad() {
                 creator: creator
               }
               
+              // Tenta buscar metadata da coleção
+              // Primeiro tenta do primeiro token mintado (se houver)
+              let loadedMetadata = null
+              
               if (Number(totalSupply) > 0) {
                 try {
                   const tokenURI = await collectionContract.tokenURI(1)
-                  // Usa função robusta para carregar metadata
-                  const loadedMetadata = await loadMetadataFromURI(tokenURI)
-                  
-                  if (loadedMetadata) {
-                    metadata = {
-                      ...metadata,
-                      name: loadedMetadata.collection_name || collectionName,
-                      description: loadedMetadata.description || '',
-                      image: loadedMetadata.image || '',
-                      // Prioriza o preço do contrato, se existir; senão usa dos metadados
-                      initial_price: metadata.initial_price !== '0' ? metadata.initial_price : (loadedMetadata.initial_price || '0'),
-                      social_links: loadedMetadata.social_links || {},
-                      launch_time: loadedMetadata.launch_time || null,
-                      has_whitelist: loadedMetadata.has_whitelist || false
-                    }
-                    if (!metadata.image) {
-                      console.warn('⚠️ Coleção sem imagem:', collectionName)
-                    }
-                  } else {
-                    console.warn('⚠️ Não foi possível carregar metadata da coleção:', collectionName)
-                  }
+                  loadedMetadata = await loadMetadataFromURI(tokenURI)
                 } catch (uriError) {
-                  console.warn('❌ Erro ao buscar tokenURI da coleção:', uriError)
+                  // Se token 1 não existir, tenta outros tokens
+                  for (let tokenId = 1; tokenId <= Math.min(Number(totalSupply), 10); tokenId++) {
+                    try {
+                      const tokenURI = await collectionContract.tokenURI(tokenId)
+                      loadedMetadata = await loadMetadataFromURI(tokenURI)
+                      if (loadedMetadata) break
+                    } catch (e) {
+                      continue
+                    }
+                  }
+                }
+              } else {
+                // Se totalSupply é 0, tenta buscar de tokens mintados diretamente
+                // Alguns contratos podem ter tokens mesmo com totalSupply retornando 0
+                for (let tokenId = 1; tokenId <= Math.min(Number(maxSupply), 10); tokenId++) {
+                  try {
+                    const tokenURI = await collectionContract.tokenURI(tokenId)
+                    loadedMetadata = await loadMetadataFromURI(tokenURI)
+                    if (loadedMetadata) {
+                      console.log(`✅ Metadata encontrado no token ${tokenId} para coleção sem totalSupply:`, collectionName)
+                      break
+                    }
+                  } catch (e) {
+                    // Token não existe, continua tentando
+                    continue
+                  }
+                }
+              }
+              
+              // Se encontrou metadata, atualiza
+              if (loadedMetadata) {
+                metadata = {
+                  ...metadata,
+                  name: loadedMetadata.collection_name || collectionName,
+                  description: loadedMetadata.description || '',
+                  image: loadedMetadata.image || '',
+                  // Prioriza o preço do contrato, se existir; senão usa dos metadados
+                  initial_price: metadata.initial_price !== '0' ? metadata.initial_price : (loadedMetadata.initial_price || '0'),
+                  social_links: loadedMetadata.social_links || {},
+                  launch_time: loadedMetadata.launch_time || null,
+                  has_whitelist: loadedMetadata.has_whitelist || false
+                }
+                if (!metadata.image) {
+                  console.warn('⚠️ Coleção sem imagem no metadata:', collectionName)
+                }
+              } else {
+                // Log apenas se realmente não conseguiu carregar e há URIs disponíveis
+                if (rawAvailableURIs > 0 || Number(totalSupply) > 0) {
+                  console.warn('⚠️ Não foi possível carregar metadata da coleção:', collectionName, {
+                    totalSupply: Number(totalSupply),
+                    availableURIs: rawAvailableURIs
+                  })
                 }
               }
               
