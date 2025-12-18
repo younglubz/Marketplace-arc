@@ -212,8 +212,6 @@ function Launchpad() {
               if (Number(totalSupply) > 0) {
                 try {
                   const tokenURI = await collectionContract.tokenURI(1)
-                  console.log('📋 TokenURI da coleção:', tokenURI.substring(0, 100) + '...')
-                  
                   // Usa função robusta para carregar metadata
                   const loadedMetadata = await loadMetadataFromURI(tokenURI)
                   
@@ -229,13 +227,11 @@ function Launchpad() {
                       launch_time: loadedMetadata.launch_time || null,
                       has_whitelist: loadedMetadata.has_whitelist || false
                     }
-                    console.log('✅ Metadata da coleção carregado:', { 
-                      name: metadata.name, 
-                      hasImage: !!metadata.image,
-                      imageUrl: metadata.image ? metadata.image.substring(0, 80) + '...' : 'sem imagem'
-                    })
+                    if (!metadata.image) {
+                      console.warn('⚠️ Coleção sem imagem:', collectionName)
+                    }
                   } else {
-                    console.warn('⚠️ Não foi possível carregar metadata da coleção')
+                    console.warn('⚠️ Não foi possível carregar metadata da coleção:', collectionName)
                   }
                 } catch (uriError) {
                   console.warn('❌ Erro ao buscar tokenURI da coleção:', uriError)

@@ -202,13 +202,19 @@ export const normalizeIPFSUrl = (ipfsUrl, noCache = false) => {
         if (noCache) {
           normalizedUrl = `${normalizedUrl}?t=${Date.now()}`
         }
-        console.log('🔗 IPFS URL normalizada (de URL completa):', { original: ipfsUrl.substring(0, 80) + '...', hash: hash.substring(0, 20) + '...', normalized: normalizedUrl.substring(0, 80) + '...' })
+        // Log apenas em modo debug
+        if (import.meta.env.DEV) {
+          console.log('🔗 IPFS URL normalizada (de URL completa):', { original: ipfsUrl.substring(0, 80) + '...', hash: hash.substring(0, 20) + '...', normalized: normalizedUrl.substring(0, 80) + '...' })
+        }
         return normalizedUrl
       }
     }
     // Se for outro gateway HTTP, retorna como está (mas remove cache antigo)
     const finalUrl = noCache && !urlWithoutParams.includes('?') ? `${urlWithoutParams}?t=${Date.now()}` : urlWithoutParams
-    console.log('🔗 URL HTTP mantida (não é gateway Pinata):', finalUrl.substring(0, 80) + '...')
+    // Log apenas em modo debug
+    if (import.meta.env.DEV) {
+      console.log('🔗 URL HTTP mantida (não é gateway Pinata):', finalUrl.substring(0, 80) + '...')
+    }
     return finalUrl
   }
   
@@ -224,7 +230,10 @@ export const normalizeIPFSUrl = (ipfsUrl, noCache = false) => {
     if (noCache) {
       normalizedUrl = `${normalizedUrl}?t=${Date.now()}`
     }
-    console.log('🔗 IPFS URL normalizada (de hash):', { original: hash.substring(0, 20) + '...', normalized: normalizedUrl.substring(0, 80) + '...' })
+    // Log apenas em modo debug
+    if (import.meta.env.DEV) {
+      console.log('🔗 IPFS URL normalizada (de hash):', { original: hash.substring(0, 20) + '...', normalized: normalizedUrl.substring(0, 80) + '...' })
+    }
     return normalizedUrl
   }
   
@@ -234,7 +243,10 @@ export const normalizeIPFSUrl = (ipfsUrl, noCache = false) => {
     if (noCache) {
       normalizedUrl = `${normalizedUrl}?t=${Date.now()}`
     }
-    console.log('🔗 IPFS URL normalizada (hash provável):', { original: hash.substring(0, 20) + '...', normalized: normalizedUrl.substring(0, 80) + '...' })
+    // Log apenas em modo debug
+    if (import.meta.env.DEV) {
+      console.log('🔗 IPFS URL normalizada (hash provável):', { original: hash.substring(0, 20) + '...', normalized: normalizedUrl.substring(0, 80) + '...' })
+    }
     return normalizedUrl
   }
   
@@ -269,7 +281,10 @@ export const loadMetadataFromURI = async (tokenURI) => {
   // Tenta parsear como JSON inline primeiro
   try {
     const parsed = JSON.parse(tokenURI)
-    console.log('✅ Metadata parseado de JSON inline')
+        // Log apenas em modo debug
+        if (import.meta.env.DEV) {
+          console.log('✅ Metadata parseado de JSON inline')
+        }
     // Normaliza a imagem se existir
     if (parsed.image) {
       parsed.image = normalizeIPFSUrl(parsed.image)
@@ -277,7 +292,10 @@ export const loadMetadataFromURI = async (tokenURI) => {
     return parsed
   } catch (e) {
     // Não é JSON inline, tenta buscar do IPFS
-    console.log('📡 TokenURI não é JSON inline, tentando buscar do IPFS...')
+      // Log apenas em modo debug
+      if (import.meta.env.DEV) {
+        console.log('📡 TokenURI não é JSON inline, tentando buscar do IPFS...')
+      }
   }
 
   // Normaliza o tokenURI para URL acessível
@@ -301,7 +319,10 @@ export const loadMetadataFromURI = async (tokenURI) => {
   // Tenta fazer fetch do metadata
   if (metadataUrl.startsWith('http')) {
     try {
-      console.log('🌐 Buscando metadata de:', metadataUrl.substring(0, 80) + '...')
+      // Log apenas em modo debug
+      if (import.meta.env.DEV) {
+        console.log('🌐 Buscando metadata de:', metadataUrl.substring(0, 80) + '...')
+      }
       
       // Adiciona timeout para evitar travamentos
       const controller = new AbortController()
@@ -318,12 +339,17 @@ export const loadMetadataFromURI = async (tokenURI) => {
       
       if (response.ok) {
         const metadata = await response.json()
-        console.log('✅ Metadata carregado com sucesso')
+        // Log apenas em modo debug
+        if (import.meta.env.DEV) {
+          console.log('✅ Metadata carregado com sucesso')
+        }
         
         // Normaliza a imagem se existir
         if (metadata.image) {
           metadata.image = normalizeIPFSUrl(metadata.image)
-          console.log('🖼️ Imagem normalizada:', metadata.image.substring(0, 80) + '...')
+          if (import.meta.env.DEV) {
+            console.log('🖼️ Imagem normalizada:', metadata.image.substring(0, 80) + '...')
+          }
         }
         
         return metadata

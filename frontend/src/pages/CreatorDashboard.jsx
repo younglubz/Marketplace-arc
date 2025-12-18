@@ -269,14 +269,12 @@ function CreatorDashboard() {
       if (!image && Number(totalSupply) > 0) {
         try {
           const tokenURI = await contract.tokenURI(1)
-          console.log('📋 Dashboard: TokenURI da coleção:', tokenURI.substring(0, 100) + '...')
           
           // Usa função robusta para carregar metadata
           const loadedMetadata = await loadMetadataFromURI(tokenURI)
           
           if (loadedMetadata && loadedMetadata.image) {
             image = loadedMetadata.image
-            console.log('✅ Dashboard: Imagem da coleção carregada:', image.substring(0, 80) + '...')
           } else {
             console.warn('⚠️ Dashboard: Metadata carregado mas sem imagem')
           }
