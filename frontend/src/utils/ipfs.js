@@ -174,7 +174,10 @@ export const getIPFSUrl = (ipfsHash) => {
  * @returns {string} URL normalizada do gateway
  */
 export const normalizeIPFSUrl = (ipfsUrl) => {
-  if (!ipfsUrl) return ''
+  if (!ipfsUrl) {
+    console.warn('⚠️ normalizeIPFSUrl recebeu URL vazia')
+    return ''
+  }
   
   // Remove espaços em branco
   ipfsUrl = ipfsUrl.trim()
@@ -182,18 +185,19 @@ export const normalizeIPFSUrl = (ipfsUrl) => {
   // Se já for uma URL completa válida (http/https)
   if (ipfsUrl.startsWith('http://') || ipfsUrl.startsWith('https://')) {
     // Se for URL do gateway Pinata, extrai o hash e reconstrói
-    if (ipfsUrl.includes('gateway.pinata.cloud/ipfs/')) {
-      // Extrai o hash da URL
-      const hashMatch = ipfsUrl.match(/ipfs\/([^/?&#]+)/)
+    if (ipfsUrl.includes('gateway.pinata.cloud/ipfs/') || ipfsUrl.includes('/ipfs/')) {
+      // Extrai o hash da URL (funciona para gateway.pinata.cloud/ipfs/ ou qualquer /ipfs/)
+      const hashMatch = ipfsUrl.match(/\/ipfs\/([^/?&#]+)/)
       if (hashMatch && hashMatch[1]) {
         const hash = hashMatch[1].trim()
-        // Reconstroi a URL com o formato correto do gateway
+        // Reconstroi a URL com o formato correto do gateway Pinata
         const normalizedUrl = `${IPFS_GATEWAY}${hash}`
-        console.log('🔗 IPFS URL normalizada:', { original: ipfsUrl, normalized: normalizedUrl })
+        console.log('🔗 IPFS URL normalizada (de URL completa):', { original: ipfsUrl.substring(0, 80) + '...', hash: hash.substring(0, 20) + '...', normalized: normalizedUrl.substring(0, 80) + '...' })
         return normalizedUrl
       }
     }
-    // Se for outro gateway, retorna como está
+    // Se for outro gateway HTTP, retorna como está
+    console.log('🔗 URL HTTP mantida (não é gateway Pinata):', ipfsUrl.substring(0, 80) + '...')
     return ipfsUrl
   }
   
@@ -205,16 +209,20 @@ export const normalizeIPFSUrl = (ipfsUrl) => {
   
   // Se for um hash IPFS válido (Qm... ou baf...), constrói a URL
   if (hash.match(/^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{58})/i)) {
-    return `${IPFS_GATEWAY}${hash}`
+    const normalizedUrl = `${IPFS_GATEWAY}${hash}`
+    console.log('🔗 IPFS URL normalizada (de hash):', { original: hash.substring(0, 20) + '...', normalized: normalizedUrl.substring(0, 80) + '...' })
+    return normalizedUrl
   }
   
   // Se parece ser um hash IPFS (começa com Qm ou baf e tem tamanho razoável), tenta mesmo assim
   if (hash.length >= 30 && (hash.startsWith('Qm') || hash.startsWith('baf'))) {
-    return `${IPFS_GATEWAY}${hash}`
+    const normalizedUrl = `${IPFS_GATEWAY}${hash}`
+    console.log('🔗 IPFS URL normalizada (hash provável):', { original: hash.substring(0, 20) + '...', normalized: normalizedUrl.substring(0, 80) + '...' })
+    return normalizedUrl
   }
   
-  // Se não reconhecer o formato, retorna como está
-  console.warn('⚠️ Formato IPFS não reconhecido:', ipfsUrl)
+  // Se não reconhecer o formato, retorna como está mas loga warning
+  console.warn('⚠️ Formato IPFS não reconhecido:', ipfsUrl.substring(0, 100))
   return ipfsUrl
 }
 

@@ -231,9 +231,11 @@ function Launchpad() {
                     // Se não for JSON, tenta buscar do IPFS
                     let metadataUrl = tokenURI
                     if (tokenURI.startsWith('ipfs://')) {
-                      metadataUrl = tokenURI.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
+                      metadataUrl = normalizeIPFSUrl(tokenURI)
                     } else if (tokenURI.startsWith('Qm') || tokenURI.startsWith('baf')) {
-                      metadataUrl = `https://gateway.pinata.cloud/ipfs/${tokenURI}`
+                      metadataUrl = normalizeIPFSUrl(tokenURI)
+                    } else if (tokenURI.startsWith('http')) {
+                      metadataUrl = tokenURI
                     }
                     
                     if (metadataUrl.startsWith('http')) {
@@ -245,17 +247,12 @@ function Launchpad() {
                             ...metadata,
                             name: fetched.collection_name || collectionName,
                             description: fetched.description || '',
-                            image: fetched.image || '',
+                            image: fetched.image ? normalizeIPFSUrl(fetched.image) : '',
                             // Prioriza o preço do contrato, se existir; senão usa dos metadados
                             initial_price: metadata.initial_price !== '0' ? metadata.initial_price : (fetched.initial_price || '0'),
                             social_links: fetched.social_links || {},
                             launch_time: fetched.launch_time || null,
                             has_whitelist: fetched.has_whitelist || false
-                          }
-                          
-                          // Normaliza imagem IPFS (trata hash, ipfs://, ou URL completa)
-                          if (metadata.image) {
-                            metadata.image = normalizeIPFSUrl(metadata.image)
                           }
                         }
                       } catch (fetchError) {

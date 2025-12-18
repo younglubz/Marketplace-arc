@@ -272,19 +272,35 @@ function CreatorDashboard() {
           let metadata = {}
           try {
             metadata = JSON.parse(tokenURI)
+            // Normaliza a imagem se vier de JSON inline
+            if (metadata.image) {
+              metadata.image = normalizeIPFSUrl(metadata.image)
+            }
           } catch {
             // Tenta buscar do IPFS
             let url = tokenURI
             if (tokenURI.startsWith('ipfs://')) {
-              url = tokenURI.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
+              url = normalizeIPFSUrl(tokenURI)
+            } else if (tokenURI.startsWith('Qm') || tokenURI.startsWith('baf')) {
+              url = normalizeIPFSUrl(tokenURI)
             }
             if (url.startsWith('http')) {
-              const res = await fetch(url)
-              if (res.ok) metadata = await res.json()
+              try {
+                const res = await fetch(url)
+                if (res.ok) {
+                  metadata = await res.json()
+                  // Normaliza a imagem se vier de fetch do IPFS
+                  if (metadata.image) {
+                    metadata.image = normalizeIPFSUrl(metadata.image)
+                  }
+                }
+              } catch (fetchError) {
+                console.warn('Dashboard: Erro ao buscar metadata do IPFS:', fetchError)
+              }
             }
           }
           if (metadata.image) {
-            image = normalizeIPFSUrl(metadata.image)
+            image = metadata.image
           }
         } catch (e) {
           console.log('Dashboard: Não foi possível obter imagem do NFT')
